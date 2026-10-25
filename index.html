@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clinical Toxicology Toolkit</title>
+    
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js for Nomogram -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts: Inter (英数字用) + Noto Sans JP (日本語用) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        .app-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .tab-container {
+            display: flex;
+            max-width: 48rem;
+            margin: 0 auto;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tab-container::-webkit-scrollbar { display: none; }
+
+        .tab-button {
+            flex: 1;
+            min-width: 85px;
+            background: transparent;
+            color: #64748b;
+            border: none;
+            padding: 14px 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tab-button:hover {
+            color: #334155;
+            background-color: #f1f5f9;
+        }
+
+        .tab-button.active-charcoal { color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-button.active-charcoal i { color: #2563eb; }
+        .tab-button.active-purification { color: #4f46e5; border-bottom-color: #4f46e5; }
+        .tab-button.active-purification i { color: #4f46e5; }
+        .tab-button.active-antidote { color: #059669; border-bottom-color: #059669; }
+        .tab-button.active-antidote i { color: #059669; }
+        .tab-button.active-ivex { color: #7c3aed; border-bottom-color: #7c3aed; }
+        .tab-button.active-ivex i { color: #7c3aed; }
+        .tab-button.active-nac { color: #0d9488; border-bottom-color: #0d9488; }
+        .tab-button.active-nac i { color: #0d9488; }
+
+        .tab-content { display: none; animation: fadeIn 0.2s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-flat {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+
+        /* IVeX パネルバッジ固有スタイル */
+        .panel-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            color: #fff;
+            text-align: center;
+            min-width: 45px;
+        }
+        .bg-METH { background-color: #ef4444; }
+        .bg-THC { background-color: #22c55e; }
+        .bg-COC { background-color: #a855f7; }
+        .bg-MOR { background-color: #475569; }
+        .bg-BZD { background-color: #f97316; }
+        .bg-TCA { background-color: #3b82f6; }
+        .bg-BAR { background-color: #64748b; }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <!-- ナビゲーションタブ -->
+    <header class="app-header">
+        <div class="tab-container">
+            <button class="tab-button active-charcoal" id="btn-charcoal" onclick="switchTab('charcoal-tab', 'btn-charcoal', 'active-charcoal')">
+                <i data-lucide="shield-check" class="w-4 h-4 text-slate-400 transition-colors"></i> 活性炭
+            </button>
+            <button class="tab-button" id="btn-purification" onclick="switchTab('purification-tab', 'btn-purification', 'active-purification')">
+                <i data-lucide="refresh-cw" class="w-4 h-4 text-slate-400 transition-colors"></i> 血液浄化
+            </button>
+            <button class="tab-button" id="btn-antidote" onclick="switchTab('antidote-tab', 'btn-antidote', 'active-antidote')">
+                <i data-lucide="syringe" class="w-4 h-4 text-slate-400 transition-colors"></i> 拮抗薬
+            </button>
+            <button class="tab-button" id="btn-ivex" onclick="switchTab('ivex-tab', 'btn-ivex', 'active-ivex')">
+                <i data-lucide="test-tube" class="w-4 h-4 text-slate-400 transition-colors"></i> IVeX
+            </button>
+            <button class="tab-button" id="btn-nac" onclick="switchTab('nac-tab', 'btn-nac', 'active-nac')">
+                <i data-lucide="line-chart" class="w-4 h-4 text-slate-400 transition-colors"></i> NAC基準
+            </button>
+        </div>
+    </header>
+
+    <!-- ==========================================
+         TAB 1: 活性炭アプリ
+    =========================================== -->
+    <div id="charcoal-tab" class="tab-content active">
+        <div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <header class="card-flat border-t-4 border-t-blue-600 p-5 flex items-center gap-4">
+                <i data-lucide="shield-check" class="w-8 h-8 text-blue-600 shrink-0"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight tracking-tight">活性炭投与判断支援</h1>
+                    <p class="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">Clin Toxicol (Phila) 2026</p>
+                </div>
+            </header>
+
+            <section class="card-flat p-5">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-blue-500"></i> 1. 薬剤検索
+                </h2>
+                <div class="relative">
+                    <input type="text" id="drugInputCharcoal" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all" placeholder="一般名・商品名を入力..." oninput="updateSuggestions()">
+                    <div id="suggestionsCharcoal" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden hidden max-h-60 overflow-y-auto"></div>
+                </div>
+                
+                <div id="selectedDrugDisplay" class="mt-4 p-4 bg-blue-50/50 rounded-md hidden border border-blue-100">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest block mb-1">Target Drug</span>
+                            <h3 id="selectedDrugName" class="text-base font-bold text-slate-800 leading-tight"></h3>
+                            <div id="drugMeta" class="mt-2 flex flex-wrap gap-1.5"></div>
+                        </div>
+                        <button onclick="resetDrug()" class="bg-white p-2 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-500 shrink-0 transition-colors">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-flat p-5">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-5 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-500"></i> 2. 経過時間・状態
+                </h2>
+                <div class="space-y-8">
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <label class="text-xs font-semibold text-slate-600">摂取からの時間</label>
+                            <div class="text-right leading-none">
+                                <span id="timeDisplay" class="text-2xl font-bold text-blue-600 tracking-tight">1.0</span>
+                                <span class="text-sm font-semibold text-slate-500 ml-0.5">h</span>
+                            </div>
+                        </div>
+                        <input type="range" id="timeRange" min="0.5" max="12" step="0.5" value="1" class="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer" oninput="updateTime(this.value)">
+                        <div class="flex justify-between text-[10px] font-semibold text-slate-400 mt-2 tracking-tight">
+                            <span>0.5h</span><span>2h</span><span>4h</span><span>6h</span><span>8h</span><span>12h+</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2" id="checksContainer"></div>
+                </div>
+            </section>
+
+            <div id="resultCard" class="card-flat p-5 transition-all duration-300 border-l-4 border-l-slate-400">
+                <div class="flex items-start gap-4">
+                    <div id="resultIcon" class="mt-1 shrink-0">
+                        <i data-lucide="help-circle" class="text-slate-400 w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="resultTitle" class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Judgement</h3>
+                        <p id="resultMessage" class="text-lg font-bold text-slate-800 leading-snug mb-2">薬剤を選択してください</p>
+                        <div id="resultDetails" class="hidden text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-2 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="mt-8 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="card-flat p-4 bg-slate-50 border-none">
+                        <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">成人 SDAC</p>
+                        <p class="text-lg font-bold tracking-tight text-slate-800">50g <span class="text-xs font-normal text-slate-500">（1g/kg）</span></p>
+                    </div>
+                    <div class="card-flat p-4 bg-slate-50 border-none">
+                        <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">反復 MDAC</p>
+                        <p class="text-lg font-bold tracking-tight text-slate-800">12.5-25g <span class="text-xs font-normal text-slate-500">（2-4h毎）</span></p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-slate-200">
+                    <p class="text-[9px] text-slate-500 text-center font-bold leading-tight">
+                        ※ 本ツールは医師の判断を支援するものであり、最終的な決定は臨床現場にて医師が行ってください。
+                    </p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 2: 血液浄化療法アプリ
+    =========================================== -->
+    <div id="purification-tab" class="tab-content">
+        <div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <header class="card-flat border-t-4 border-t-indigo-600 p-5 flex items-center gap-4">
+                <i data-lucide="refresh-cw" class="w-8 h-8 text-indigo-600 shrink-0"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight tracking-tight">EXTRIP 適応確認</h1>
+                    <p class="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">血液浄化療法 ガイドライン</p>
+                </div>
+            </header>
+
+            <section class="card-flat p-5">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i data-lucide="filter" class="w-3.5 h-3.5 text-indigo-500"></i> 薬剤選択
+                </h2>
+                <div class="relative">
+                    <select id="drug-select" onchange="displayGuidelines()" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md px-4 py-3 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none transition-all appearance-none cursor-pointer text-slate-800">
+                        <option value="" disabled selected>対象の薬剤を選択してください...</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </div>
+                </div>
+            </section>
+
+            <section id="content-display" class="card-flat p-6 min-h-[250px] flex flex-col justify-center transition-all duration-300">
+                <div class="text-center text-slate-400 space-y-3">
+                    <i data-lucide="clipboard-list" class="w-8 h-8 mx-auto text-slate-300"></i>
+                    <p class="text-sm font-semibold">上のメニューから薬剤を選択してください。</p>
+                </div>
+            </section>
+            
+            <footer class="mt-4 pt-4 border-t border-slate-200">
+                <p class="text-[9px] text-slate-500 text-center font-bold leading-tight">
+                    ※ 本ツールは医師の判断を支援するものであり、最終的な決定は臨床現場にて医師が行ってください。
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 3: 拮抗薬アプリ
+    =========================================== -->
+    <div id="antidote-tab" class="tab-content">
+        <div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <header class="card-flat border-t-4 border-t-emerald-600 p-5 flex items-center gap-4">
+                <i data-lucide="syringe" class="w-8 h-8 text-emerald-600 shrink-0"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight tracking-tight">拮抗薬検索ツール</h1>
+                    <p class="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">2025 AHA / 国内マスタ 準拠</p>
+                </div>
+            </header>
+
+            <section class="card-flat p-4 sticky top-[60px] z-50 shadow-sm">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-4 h-4 text-emerald-500"></i>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="薬剤名・薬毒物名で検索 (例: アセトアミノフェン、マイスリー...)" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:bg-white outline-none transition-all placeholder:font-normal">
+                </div>
+            </section>
+
+            <div id="results" class="space-y-4"></div>
+            
+            <footer class="mt-8 pt-4 border-t border-slate-200">
+                <p class="text-[9px] text-slate-500 text-center font-bold leading-tight">
+                    ※ 本ツールは医師の判断を支援するものであり、最終的な決定は臨床現場にて医師が行ってください。
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 4: IVeX-screen 陽性薬剤検索アプリ
+    =========================================== -->
+    <div id="ivex-tab" class="tab-content">
+        <div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <header class="card-flat border-t-4 border-t-violet-600 p-5 flex items-center gap-4">
+                <i data-lucide="test-tube" class="w-8 h-8 text-violet-600 shrink-0"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight tracking-tight">IVeX-screen 陽性薬剤検索</h1>
+                    <p class="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">尿中薬物スクリーニング 反応マスタ</p>
+                </div>
+            </header>
+
+            <section class="card-flat p-4 sticky top-[60px] z-50 shadow-sm">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-4 h-4 text-violet-500"></i>
+                    </div>
+                    <input type="text" id="searchInputIvex" placeholder="一般名、英語表記、商品名、パネル名で検索..." class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md pl-10 pr-4 py-2.5 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:bg-white outline-none transition-all placeholder:font-normal">
+                </div>
+            </section>
+
+            <div class="text-xs font-bold text-slate-500 px-1" id="resultCountIvex">全 0 件</div>
+
+            <section class="card-flat overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="p-3 text-xs font-bold uppercase text-slate-500 tracking-wider w-[15%]">パネル</th>
+                                <th class="p-3 text-xs font-bold uppercase text-slate-500 tracking-wider w-[45%]">一般名 (日本語)</th>
+                                <th class="p-3 text-xs font-bold uppercase text-slate-500 tracking-wider w-[25%]">英語表記</th>
+                                <th class="p-3 text-xs font-bold uppercase text-slate-500 tracking-wider w-[15%]">閾値 (ng/mL)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultTableBodyIvex" class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                            <!-- JSで動的描画 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <footer class="mt-8 pt-4 border-t border-slate-200">
+                <p class="text-[9px] text-slate-500 text-center font-bold leading-tight">
+                    ※ 本ツールは医師の判断を支援するものであり、最終的な決定は臨床現場にて医師が行ってください。
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 5: NACノモグラム アプリ (新設)
+    =========================================== -->
+    <div id="nac-tab" class="tab-content">
+        <div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <header class="card-flat border-t-4 border-t-teal-600 p-5 flex items-center gap-4">
+                <i data-lucide="line-chart" class="w-8 h-8 text-teal-600 shrink-0"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight tracking-tight">NAC 適応判定</h1>
+                    <p class="text-slate-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">Rumack-Matthew Nomogram</p>
+                </div>
+            </header>
+
+            <section class="card-flat p-5">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">服薬時刻</label>
+                        <input type="datetime-local" id="nacIngestionTime" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md px-4 py-3 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">採血時刻</label>
+                        <input type="datetime-local" id="nacDrawTime" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md px-4 py-3 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">血清アセトアミノフェン濃度 (µg/mL)</label>
+                        <input type="number" id="nacConcentration" step="0.1" placeholder="例: 150" class="w-full text-base font-semibold border border-slate-300 bg-slate-50 rounded-md px-4 py-3 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <button onclick="calculateNAC()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm mt-4 flex items-center justify-center gap-2">
+                        <i data-lucide="calculator" class="w-5 h-5"></i> 適応を判定する
+                    </button>
+                </div>
+            </section>
+
+            <div id="nacResultBox" class="hidden"></div>
+            
+            <section id="nacChartWrapper" class="card-flat p-5 hidden">
+                <div class="relative h-[300px] w-full">
+                    <canvas id="nacNomogramChart"></canvas>
+                </div>
+            </section>
+
+            <footer class="mt-8 pt-4 border-t border-slate-200">
+                <div class="bg-amber-50 p-3 rounded border border-amber-100 flex items-start gap-2 mb-3">
+                     <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                     <p class="text-xs text-amber-900 font-semibold leading-relaxed">徐放錠（タイレノール等）の大量内服や、複数回内服の場合はノモグラムの適用外となることがあります。</p>
+                </div>
+                <p class="text-[9px] text-slate-500 text-center font-bold leading-tight">
+                    ※ 本ツールは医師の判断を支援するものであり、最終的な決定は臨床現場にて医師が行ってください。
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         JavaScript (全機能統合版)
+    =========================================== -->
+    <script>
+        function switchTab(tabId, btnId, activeClass) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) tabContents[i].classList.remove("active");
+            document.getElementById(tabId).classList.add("active");
+
+            const tabButtons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove("active-charcoal", "active-purification", "active-antidote", "active-ivex", "active-nac");
+            }
+            document.getElementById(btnId).classList.add(activeClass);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ==========================================
+        //  1. 活性炭アプリのJS
+        // ==========================================
+        const DRUG_MASTER = [
+            { name: "Acetaminophen", kana: "アセトアミノフェン", brands: ["カロナール", "タイレノールA", "ラックル", "バファリンルナi", "バファリンルナJ", "バファリンプレミアム", "ナロン錠", "ナロンエース", "新セデス錠", "セデス・ハイ", "パブロンゴールドA", "パブロンS", "パブロンメディカル", "新ルルゴールドs", "ルルアタックIBエース", "エスタック総合感冒", "エスタックイブ", "ピーエイ配合錠"], category: "解熱鎮痛薬", ir: 3, mr: 6, threshold: "200mg/kg", special: "IRは3h、MRは6hまで示唆。大量摂取(IR 350mg/kg, MR 300mg/kg)で追加投与検討。" },
+            { name: "Antidysrhythmics", kana: "抗不整脈薬", brands: ["リドカイン", "キシロカイン", "プロカイン", "プロカインアミド", "アミサリン", "アミオダロン", "アンカロン", "メキシレチン", "メキシチール"], category: "不整脈治療薬", ir: 2, mr: 6, threshold: "常用量×5以上", special: "IRは2hまで示唆、MRは6hまで推奨。アミオダロンは1.5h遅延でも効果あり。" },
+            { name: "Benzodiazepines", kana: "ベンゾジアゼピン系", brands: ["トリアゾラム", "ハルシオン", "ブロチゾラム", "レンドルミン", "ロルメタゼパム", "リルマザホン", "フルニトラゼパム", "サイレース", "エスタゾラム", "ニトラゼパム", "ニメタゼパム", "クアゼパム", "フルラゼパム", "ハロキサゾラム", "ゾルピデム", "マイスリー", "ルネスタ", "アモバン", "デパス", "リーゼ", "レスタス", "ソラナックス", "コンスタン", "ワイパックス", "レキソタン", "ジアゼパム", "セルシン", "ホリゾン", "クロキサゾラム", "クロルジアゼポキシド", "バランス", "メタゼパム", "レスミット", "オキサゾラム", "セレナール", "メイラックス", "セダプラン", "リボトリール", "ランドセン", "マイスタン"], category: "抗不安薬/睡眠薬", ir: 0.5, mr: 0.5, special: "30分〜2hは非推奨(2,D)。2h以降は原則禁止(1,D)。誤嚥リスクがベネフィットを上回るため。" },
+            { name: "Beta-blockers", kana: "ベータ遮断薬", brands: ["アテノロール", "テノーミン", "ナドロール", "ナディック", "プロプラノロール", "インデラル", "ソタロール", "ビソプロロール", "メインテート", "メトプロロール", "セロケン", "ロプレソール", "べタキソール", "ケルロング", "エスモロール", "ブレビブロック", "アセブトロール", "セリプロロール", "セレクトール", "チモロール", "ピンドール", "カルテオロール", "ミケラン", "サンドドリン", "カルベジロール", "アーチスト", "ラベタロール", "アルマール"], category: "循環器薬", ir: 2, mr: 3, threshold: "Atenolol 6mg/kg等", special: "Sotalol(MR)は1hまで推奨。脂溶性(Propranolol等)はCNS毒性に注意。" },
+            { name: "Bupropion", kana: "ブプロピオン", brands: ["ザイバン"], ir: 2, mr: 3, threshold: "20mg/kg", special: "痙攣(1/3)や心毒性のリスク。IRは2h、MRは3hまで示唆。" },
+            { name: "CCB", kana: "カルシウム拮抗薬", brands: ["アムロジピン", "ノルバスク", "アムロジン", "エックスフォージ", "レザルタス", "ユニシア", "アイミクス", "アジルバ", "ザクラス", "テラムロ", "ミカムロ", "カムシア", "カデュエット", "アテディオ", "ミカトリオ", "アゼルニジピン", "カルブロック", "シルニジピン", "アテレック", "ベニジピン", "ニフェジピン", "アダラート", "ジルチアゼム", "ヘルベッサー", "ベラパミル", "ワソラン"], category: "循環器薬", ir: 3, mr: 5, threshold: "Amlodipine 5回量, 他 3回量", special: "Amlodipine(MR)は2hまで推奨。他は5hまで示唆。" },
+            { name: "Carbamazepine", kana: "カルバマゼピン", brands: ["テグレトール"], ir: 3, mr: 4, threshold: "25mg/kg", mdac: true, special: "IRは3hまで、MRは4hまで示唆。>40mg/kgでMDAC検討。" },
+            { name: "Cardiac glycosides", kana: "強心糖体 (ジゴキシン)", brands: ["ジゴキシン", "ジゴシン", "ハーフジゴキシン", "メチルジゴキシン", "ラニラピッド", "オレアンドリン", "キョウチクトウ", "ケルベリン", "ヤシガニ"], ir: 2, mr: 2, threshold: "Digoxin 75μg/kg", mdac: true, special: "6h以降反対。MDACはDigoxin 100μg/kg以上で示唆。" },
+            { name: "Chloroquine", kana: "ヒドロキシクロロキン", brands: ["プラニケル"], ir: 2, mr: 2, threshold: "35mg/kg", special: "虚脱が早いため早期。2hまで示唆、6h以降反対。" },
+            { name: "Cocaine", kana: "コカイン", brands: ["コカイン"], ir: 2, mr: 2, threshold: "5mg/kg", special: "2hまで示唆。5h以降反対。" },
+            { name: "Colchicine", kana: "コルヒチン", brands: ["コルヒチン", "イヌサフラン", "グロリオサ"], ir: 4, mr: 4, threshold: "0.4mg/kg", mdac: true, special: "致死性高。4hまで示唆。0.7mg/kg以上でMDAC検討。" },
+            { name: "Cyanide", kana: "シアン / 青酸", brands: ["シアン", "青酸"], ir: 2, mr: 2, threshold: "2mg/kg", special: "30分以内推奨。解毒剤優先。" },
+            { name: "Dapsone", kana: "ジアフェニルスルホン", brands: ["ダプソン", "レクチゾール"], ir: 3, mr: 3, threshold: "6mg/kg", mdac: true, special: "10mg/kg以上でMDAC推奨。" },
+            { name: "Diphenhydramine", kana: "ジフェンヒドラミン", brands: ["レスタミン", "ドリエル", "リポスミン", "ハイヤスミンA", "ナイトロンS", "アンミナイト", "トラベルミン"], category: "抗ヒスタミン薬", ir: 2, mr: 4, threshold: "15mg/kg", special: "胃排泄遅延考慮。6h以降反対。" },
+            { name: "Disopyramide", kana: "ジソピラミド", brands: ["リスモダン"], ir: 2, mr: 3, threshold: "1g", special: "IR 2h, MR 3h示唆。6h以降反対。" },
+            { name: "Factor Xa inhibitors", kana: "第Xa因子阻害薬", brands: ["リバーロキサバン", "イグザレルト", "アピキサバン", "エリキュース", "エドキサバン", "リクシアナ"], ir: 4, mr: 4, special: "1h推奨、4h示唆。リバーロキサバンは8h後でもAUC減少の報告あり。" },
+            { name: "Ibuprofen", kana: "イブプロフェン", brands: ["イブA錠", "イブA錠EX", "イブクイック頭痛薬", "イブクイック頭痛薬DX", "イブメルト", "バファリンプレミアム", "バファリンプレミアムDX", "バファリンルナi", "ナロンエース", "リングルアイビー", "リングルアイビーα200", "アダムA錠", "ノーシンピュア", "パブロンエースPro-X", "パブロンメディカル", "ルルアタックEX", "ルルアタックEXプレミアム", "ベンザブロックLプレミアム", "ベンザブロックLプレミアム24", "エルペインコーワ"], ir: 2, mr: 2, threshold: "250mg/kg", special: "2hまで示唆。5h以降反対。" },
+            { name: "Iron", kana: "鉄剤", brands: ["乾燥硫酸第一鉄", "フェログラデュメット", "フェルム", "フェロミア", "インクレミン", "リオナ", "ピートル"], ads: false, special: "投与反対。吸着せず全腸洗浄検討。" },
+            { name: "Isoniazid", kana: "イソニアジド", brands: ["イスコチン"], ir: 2, mr: 2, threshold: "40mg/kg", special: "経口VitB6投与時はACが吸着するため避ける。" },
+            { name: "Lamotrigine", kana: "ラモトリギン", brands: ["ラミクタール"], ir: 2, mr: 4, threshold: "30mg/kg", special: "IR 2h, MR 4hまで示唆。" },
+            { name: "Lithium", kana: "炭酸リチウム", brands: ["リーマス"], ads: false, special: "投与反対。吸着しない。" },
+            { name: "Metals", kana: "金属 (銅, 鉛, セシウム, 水銀)", brands: ["銅", "鉛", "セシウム", "水銀"], ads: false, special: "タリウム除き反対。" },
+            { name: "Metformin", kana: "メトホルミン", brands: ["メトグルコ"], ads: false, special: "投与反対示唆。" },
+            { name: "Methotrexate", kana: "メトトレキサート", brands: ["リウマトレックス", "メトレート"], ir: 2, mr: 2, threshold: "10mg/kg", special: "2h示唆。経口フォリン酸と併用時は避ける。" },
+            { name: "Moclobemide", kana: "モクロベミド", brands: ["オーロリックス"], ir: 2, mr: 2, threshold: "20mg/kg", special: "50mg/kg以上なら4hまで検討。" },
+            { name: "Opioids", kana: "オピオイド", brands: ["モルヒネ", "アンペック", "MSコンチン", "フェンタニル", "フェントス", "オキシコドン", "オキシコンチン", "オキノーム", "タペンタドール", "タペンタ", "ヒドロモルフォン", "ナルサス", "ナルラピド", "メサドン", "メサペイン", "トラマドール", "トラマール", "トラムセット", "トアラセット", "コデインリン酸塩", "コデイン", "ジヒドロコデイン", "パブロンゴールドA", "パブロンSα", "パブロンSゴールドW", "新ルルAゴールドs", "ルルAコート錠", "ベンザブロックSプレミアム", "ベンザブロックIPプレミアム", "エスタックEX", "エスタックイブファイン", "新コルゲンコーワ微粒", "コルゲンコーワIB錠", "新ブロン液エース", "エスエスブロン錠", "アネトンせき止め", "パブロンせき止め", "コデジールG顆粒", "ミルコデ錠A"], ir: 1, mr: 2, special: "IR 1h, MR 2h示唆。5h以降反対。" },
+            { name: "Organophosphorus", kana: "有機リン系殺虫剤", brands: ["マラチオン", "マラソン", "フェニトロチオン", "スミチオン", "ダーズバン", "パピレス", "バポナ", "オルトラン", "ダイアジノン", "パラチオン", "パラスター"], ir: 2, mr: 2, special: "2hまで示唆。MDAC強く反対。" },
+            { name: "Paraquat", kana: "パラコート", brands: ["グラモキソン", "プリグロックスL"], ir: 4, mr: 4, threshold: "5mg/kg", special: "3h推奨、4h示唆。致命的。" },
+            { name: "Phenobarbital", kana: "フェノバルビタール", brands: ["フェノバール"], ir: 3, mr: 3, threshold: "20mg/kg", mdac: true, special: "3h推奨。50mg/kg以上でMDAC推奨。" },
+            { name: "Phenytoin", kana: "フェニトイン", brands: ["アレビアチン", "ヒダントール"], ir: 2, mr: 4, threshold: "40mg/kg", mdac: true, special: "IR 2h, MR 4h示唆。5h以降反対。" },
+            { name: "Quinine / Quinidine", kana: "キニーネ / キニジン", brands: ["塩酸キニーネ", "キニジン"], ir: 2, mr: 4, mdac: true, special: "IR 2h, MR 4h示唆。" },
+            { name: "Salicylates", kana: "アセチルサリチル酸", brands: ["バイアスピリン", "バファリン", "サリチルアミド", "ピーエイ配合錠"], ir: 4, mr: 5, threshold: "200mg/kg", mdac: true, special: "胃内停滞考慮。大量摂取時追加投与検討。" },
+            { name: "SSRI / SNRI", kana: "SSRI / SNRI", brands: ["フルボキサミン", "ルボックス", "デプロメール", "パロキセチン", "パキシル", "セルトラリン", "ジェイゾロフト", "エスシタロプラム", "レクサプロ", "ミルナシプラン", "トレドミン", "デュロキセチン", "サインバルタ", "ミルタザピン", "リフレックス", "ボルチオキセチン", "トリンテリックス", "トラゾドン", "レスリン", "デジレル"], ir: 2, mr: 4, threshold: "治療量×15", special: "6h以降禁止。" },
+            { name: "Sulfonylureas", kana: "SU薬", brands: ["グリメピリド", "アマリール", "グリクラジド", "グリミクロン", "グリベンクラミド", "オイグルコン", "ダオニール"], ir: 2, mr: 2, threshold: "治療量×5以上", special: "6h以降反対。" },
+            { name: "Thallium", kana: "タリウム", brands: ["タリウム"], ir: 1, mr: 1, threshold: "10mg/kg", mdac: true, special: "1hまで示唆。" },
+            { name: "Theophylline", kana: "テオフィリン", brands: ["テオドール", "テオロング", "ユニコン", "アミノフィリン", "ネオフィリン"], ir: 3, mr: 6, threshold: "20mg/kg", mdac: true, special: "IR 3h, MR 6h示唆。MDAC強く推奨。" },
+            { name: "Toxic alcohols", kana: "有毒アルコール", brands: ["メタノール", "エチレングリコール", "イソプロパノール", "ジエチレングリコール", "プロピレングリコール"], ads: false, special: "投与反対。" },
+            { name: "TCA", kana: "三環系抗うつ薬", brands: ["アミトリプチン", "トリプタノール", "イミプラミン", "トフラニール", "クロミプラミン", "アナフラニール", "トリミプラミン", "スルモンチール", "ノルトリプチン", "ノリトレン", "アモキサピン", "アモキサン", "ドスレピン", "プロチアドン", "ロフェプラミン", "アンプリット"], ir: 3, mr: 3, threshold: "10mg/kg", special: "2h推奨、3h示唆。胃排泄遅延考慮。" },
+            { name: "Valproic acid", kana: "バルプロ酸ナトリウム", brands: ["デパケン", "セレニカ"], ir: 3, mr: 4, threshold: "200mg/kg", special: "IR 3h, MR 4h示唆。" },
+            { name: "Venlafaxine", kana: "ベンラファキシン", brands: ["イフェクサー"], ir: 2, mr: 3, threshold: "25mg/kg", special: "IR 2h, MR 3h示唆。" },
+            { name: "Warfarin", kana: "ワルファリンカリウム", brands: ["ワーファリン"], ir: 1, mr: 1, threshold: "0.7mg/kg", special: "1h推奨。" }
+        ];
+
+        const CHECK_CONFIGS = [
+            { key: 'airway', label: "気道防御が可能 (意識清明/挿管済)", danger: false, icon: "shield-alert" },
+            { key: 'corrosive', label: "腐食性物質の摂取疑い", danger: true, icon: "flame" },
+            { key: 'hydrocarbon', label: "炭化水素の摂取疑い", danger: true, icon: "droplet" },
+            { key: 'bowel', label: "腸閉塞・穿孔・虚血の疑い", danger: true, icon: "activity" }
+        ];
+
+        let state = { selectedDrug: null, time: 1.0, checks: { airway: true, corrosive: false, hydrocarbon: false, bowel: false } };
+
+        function initCharcoal() { renderChecks(); updateRecommendation(); }
+
+        function renderChecks() {
+            const container = document.getElementById('checksContainer');
+            container.innerHTML = CHECK_CONFIGS.map(c => `
+                <button onclick="toggleCheck('${c.key}')" class="flex items-center justify-between p-3 rounded-md border transition-all ${
+                    state.checks[c.key] ? (c.danger ? 'border-red-400 bg-red-50' : 'border-blue-400 bg-blue-50') : 'border-slate-200 bg-white hover:border-slate-300'
+                }">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <i data-lucide="${c.icon}" class="w-4 h-4 shrink-0 ${state.checks[c.key] ? (c.danger ? 'text-red-500' : 'text-blue-500') : 'text-slate-400'}"></i>
+                        <span class="text-sm font-semibold text-left leading-tight ${state.checks[c.key] ? 'text-slate-800' : 'text-slate-500'}">${c.label}</span>
+                    </div>
+                    <div class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ml-2 ${state.checks[c.key] ? (c.danger ? 'bg-red-500 border-red-500 text-white' : 'bg-blue-500 border-blue-500 text-white') : 'bg-white border-slate-300'}">
+                        ${state.checks[c.key] ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                    </div>
+                </button>
+            `).join('');
+            if(window.lucide) lucide.createIcons();
+        }
+
+        function toggleCheck(key) { state.checks[key] = !state.checks[key]; renderChecks(); updateRecommendation(); }
+        function updateTime(val) { state.time = parseFloat(val); document.getElementById('timeDisplay').innerText = state.time.toFixed(1); updateRecommendation(); }
+
+        function updateSuggestions() {
+            const input = document.getElementById('drugInputCharcoal').value.toLowerCase();
+            const suggBox = document.getElementById('suggestionsCharcoal');
+            if (!input) { suggBox.classList.add('hidden'); return; }
+            const matches = DRUG_MASTER.filter(d => d.name.toLowerCase().includes(input) || d.kana.includes(input) || d.brands.some(b => b.includes(input)));
+            if (matches.length > 0) {
+                suggBox.innerHTML = matches.map(d => `
+                    <div onclick="selectDrug('${d.name}')" class="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-none flex justify-between items-center">
+                        <div class="min-w-0 flex-1 pr-2">
+                            <div class="font-bold text-slate-800 text-sm">${d.kana}</div>
+                            <div class="text-[10px] text-slate-500 uppercase mt-0.5">${d.category} | ${d.name}</div>
+                        </div>
+                        ${d.mdac ? '<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold shrink-0 border border-slate-200">MDAC</span>' : ''}
+                    </div>
+                `).join('');
+                suggBox.classList.remove('hidden');
+            } else { suggBox.classList.add('hidden'); }
+        }
+
+        function selectDrug(name) {
+            state.selectedDrug = DRUG_MASTER.find(d => d.name === name);
+            document.getElementById('drugInputCharcoal').value = '';
+            document.getElementById('suggestionsCharcoal').classList.add('hidden');
+            document.getElementById('selectedDrugDisplay').classList.remove('hidden');
+            document.getElementById('selectedDrugName').innerText = state.selectedDrug.kana;
+            document.getElementById('drugMeta').innerHTML = `
+                <span class="bg-white text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200">${state.selectedDrug.category}</span>
+                ${state.selectedDrug.threshold ? `<span class="bg-white text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">閾値: ${state.selectedDrug.threshold}</span>` : ''}
+                ${state.selectedDrug.mdac ? `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-indigo-200 flex items-center gap-1"><i data-lucide="repeat" class="w-3 h-3"></i> MDAC</span>` : ''}
+            `;
+            updateRecommendation();
+            if(window.lucide) lucide.createIcons();
+        }
+
+        function resetDrug() { state.selectedDrug = null; document.getElementById('selectedDrugDisplay').classList.add('hidden'); updateRecommendation(); }
+
+        function updateRecommendation() {
+            const card = document.getElementById('resultCard');
+            const iconDiv = document.getElementById('resultIcon');
+            const title = document.getElementById('resultTitle');
+            const msg = document.getElementById('resultMessage');
+            const details = document.getElementById('resultDetails');
+
+            if (!state.selectedDrug) {
+                applyStyle('slate', 'border-l-slate-400'); title.innerText = "Waiting"; msg.innerText = "薬剤を選択してください"; details.classList.add('hidden'); return;
+            }
+
+            if (!state.checks.airway) {
+                applyStyle('red', 'border-l-red-500'); title.innerText = "Forbidden"; msg.innerText = "投与不可 (管理優先)";
+                showDetails("意識障害に伴う誤嚥リスクが極めて高い状態です。確実な気道確保（挿管等）が行われるまで投与を控えてください。");
+            } else if (state.checks.corrosive || state.checks.hydrocarbon || state.checks.bowel) {
+                applyStyle('red', 'border-l-red-500'); title.innerText = "Contraindicated"; msg.innerText = "禁忌 (身体所見)";
+                showDetails("身体所見に基づく禁忌事項（腐食性、炭化水素、腸管虚血）に該当します。活性炭の投与は禁止です。");
+            } else if (state.selectedDrug.ads === false) {
+                applyStyle('amber', 'border-l-amber-500'); title.innerText = "Non-adsorbable"; msg.innerText = "非推奨 (吸着なし)";
+                showDetails("この物質は活性炭に吸着しません。投与によるメリットがなく、嘔吐等のリスクのみが懸念されます。");
+            } else {
+                const limit = state.selectedDrug.mr || state.selectedDrug.ir || 2;
+                const ir = state.selectedDrug.ir || 1;
+                if (state.time <= ir) {
+                    applyStyle('emerald', 'border-l-emerald-500'); title.innerText = "Recommended"; msg.innerText = "投与推奨 (適応)";
+                    showDetails("摂取後早期です。ガイドラインで推奨される最も有効性が高い時間枠内です。");
+                } else if (state.time <= limit) {
+                    applyStyle('emerald', 'border-l-emerald-500'); title.innerText = "Consider"; msg.innerText = "投与検討 (継続可)";
+                    showDetails("時間を経過していますが、薬剤特性（徐放錠・胃内停滞等）により単回投与のベネフィットが期待されます。");
+                } else if (state.selectedDrug.mdac && state.time <= 12) {
+                    applyStyle('indigo', 'border-l-indigo-500'); title.innerText = "Consider MDAC"; msg.innerText = "MDAC検討 (反復)";
+                    showDetails("単回投与の適応時期は過ぎていますが、反復投与(MDAC)による消失促進が推奨される薬剤です。");
+                } else {
+                    applyStyle('slate', 'border-l-slate-400'); title.innerText = "Not Recommended"; msg.innerText = "非推奨 (遅延)";
+                    showDetails("一定の時間が経過しており、この薬剤において単回投与を行う医学的根拠は乏しいです。");
+                }
+            }
+
+            function showDetails(text) {
+                details.classList.remove('hidden');
+                details.innerHTML = `<p>${text}</p>${state.selectedDrug.special ? `<p class="mt-2 text-xs font-semibold text-blue-600">Note: ${state.selectedDrug.special}</p>` : ''}`;
+            }
+
+            function applyStyle(color, borderClass) {
+                const styles = { emerald: { icon: 'check-circle', iconColor: 'text-emerald-500' }, amber: { icon: 'alert-triangle', iconColor: 'text-amber-500' }, red: { icon: 'shield-alert', iconColor: 'text-red-500' }, indigo: { icon: 'repeat', iconColor: 'text-indigo-500' }, slate: { icon: 'info', iconColor: 'text-slate-400' } };
+                const s = styles[color];
+                card.className = `card-flat p-5 transition-all duration-300 border-l-4 ${borderClass}`;
+                iconDiv.innerHTML = `<i data-lucide="${s.icon}" class="${s.iconColor} w-6 h-6"></i>`;
+                if(window.lucide) lucide.createIcons();
+            }
+        }
+
+        // ==========================================
+        //  2. 血液浄化療法アプリのJS
+        // ==========================================
+        const extripData = {
+            "アセトアミノフェン": {
+                "全体的な推奨 (General Recommendation)": "重症アセトアミノフェン（APAP）中毒では、血液浄化療法（ECTR）が提案される（2D）。",
+                "適応 (Indications)": "【推奨される（1D）】\n・NACが投与されておらず、[APAP] が 1000 mg/L (6620 μmol/L) を超える場合\n・精神状態の変容（意識障害）および乳酸値上昇を伴う代謝性アシドーシスがあり、NACが投与されておらず、[APAP] が 700 mg/L (4630 μmol/L) を超える場合\n・精神状態の変容、乳酸値上昇を伴う代謝性アシドーシスがあり、[APAP] が 900 mg/L (5960 μmol/L) を超える場合（NAC投与の有無にかかわらず）\n\n【推奨されない（1D）】\n・NACが投与されている場合、申告された摂取量のみを根拠としたECTRの実施\n\n【提案されない（2D）】\n・NACが投与されていない場合でも、申告された摂取量のみを根拠としたECTRの実施\n・NACが投与されている場合、[APAP]血中濃度のみを根拠としたECTRの実施",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nHDが使用できない場合の許容される代替手段：\n・間欠的血液吸着（HP）（1D）\n・持続的腎代替療法（CRRT）（3D）\n・新生児における交換輸血（2D）",
+                "終了基準 (Cessation of ECTR)": "持続的な臨床症状の改善が明らかになるまでの施行が推奨される（1D）。",
+                "特記事項 (Miscellaneous)": "ECTR施行中は、NAC療法を増量して継続すべきである（1D）。",
+                "Reference": "Gosselin S, et al. Extracorporeal treatment for acetaminophen poisoning: recommendations from the EXTRIP workgroup. Clin Toxicol (Phila). 2014."
+            },
+            "バクロフェン": {
+                "全体的な推奨 (General Recommendation)": "重症の急性バクロフェン中毒において、標準治療に加えてECTRを行うことは提案されない（標準治療単独を支持する）（弱い推奨）。\n\n治療用量であっても、腎機能障害に伴って生じた重症中毒では、標準治療に加えてECTRを行うことが提案される（弱い推奨）。",
+                "適応 (Indications)": "腎機能障害に伴う治療用量での中毒において、人工呼吸器管理を要する昏睡を伴う場合にECTRの実施が提案される（弱い推奨）。",
+                "モダリティの選択 (Choice of ECTR)": "ECTRが必要な患者では、他のモダリティよりも間欠的血液透析（IHD）を行うことが推奨される（強い推奨）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善に基づいてECTRを終了することが推奨される（強い推奨）。",
+                "特記事項 (Miscellaneous)": "ECTRを施行する場合、特に長期維持療法を受けていた患者では、離脱症状の兆候に注意し、適切にモニタリングされた環境で慎重にフォローすることが重要である。",
+                "Reference": "Ghannoum M, et al. Recommendations from the EXTRIP workgroup on extracorporeal treatment for baclofen poisoning. Kidney Int. 2021."
+            },
+            "バルビツール酸": {
+                "全体的な推奨 (General Recommendation)": "重症の長時間作用型バルビツール酸中毒において、ECTRは推奨される（1D）。",
+                "適応 (Indications)": "【推奨される（1D）】\n・遷延性の昏睡が存在、または予想される場合\n・初期輸液蘇生後もショックが持続する場合\n・MDAC（複数回活性炭投与）を行っても毒性が持続する場合\n\n【提案される（2D）】\n・MDACを行っても、血中濃度が上昇または高値で持続する場合\n・人工呼吸器管理を要する呼吸抑制がある場合",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\n成人の場合、HDが使用できなければHP（1D）またはCRRT（3D）が許容される代替手段となる。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善が明らかになった時点で終了の適応となる（1D）。",
+                "Reference": "Mactier R, et al. Extracorporeal treatment for barbiturate poisoning: recommendations from the EXTRIP Workgroup. Am J Kidney Dis. 2014."
+            },
+            "β遮断薬": {
+                "全体的な推奨と適応 (General Recommendation and Indications)": "【プロプラノロール】\n重症中毒において、標準治療に加えてECTRを行うことは推奨されない（強い推奨）。\n\n【アテノロール】\n・腎機能障害があり、難治性の徐脈および低血圧が存在する場合は、ECTRの実施が提案される（弱い推奨）。\n・正常腎機能の重症中毒では、賛否の推奨はない。\n\n【ソタロール】\n・腎機能障害があり、難治性の徐脈・低血圧、あるいは反復するトルサード・ド・ポアンツ（TdP）が存在する場合は、ECTRの実施が提案される（弱い推奨）。\n・正常腎機能では賛否の推奨はない。\n・QT延長のみを根拠としたECTRの実施は提案されない（弱い推奨）。",
+                "モダリティの選択 (Choice of ECTR)": "アテノロールまたはソタロール中毒でECTRが必要な場合、すべてのモダリティが利用可能であれば、間欠的血液透析（IHD）の使用が推奨される（強い推奨）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善に基づいて終了することが推奨される（強い推奨）。",
+                "Reference": "Bouchard J, et al. Extracorporeal treatment for poisoning to beta-adrenergic antagonists: systematic review and recommendations from the EXTRIP workgroup. Crit Care. 2021."
+            },
+            "カルシウム拮抗薬": {
+                "全体的な推奨 (General Recommendations)": "アムロジピン、ジルチアゼム、ベラパミルの重症中毒患者において、標準治療に加えてECTRを行うことは推奨されない（標準治療単独を推奨する）（強い推奨）。",
+                "Reference": "Wong A, et al. Extracorporeal treatment for calcium channel blocker poisoning: systematic review and recommendations from the EXTRIP workgroup. Clin Toxicol (Phila). 2021."
+            },
+            "カルバマゼピン": {
+                "全体的な推奨 (General Recommendation)": "重症カルバマゼピン中毒においてECTRは提案される（2D）。",
+                "適応 (Indications)": "【以下のいずれかに該当する場合は推奨される（1D）】\n・治療に不応の反復する痙攣がある場合\n・致死的な不整脈が発生した場合\n\n【以下のいずれかに該当する場合は提案される（2D）】\n・遷延性の昏睡、および/または人工呼吸器を要する呼吸抑制が存在・予想される場合\n・MDACや支持療法にもかかわらず、血中濃度が上昇・高値持続するなど、重大な毒性が持続する場合",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nHDが使用できない場合の代替手段：\n・間欠的血液吸着（HP）（1D）\n・持続的腎代替療法（CRRT）（3D）",
+                "終了基準 (Cessation of ECTR)": "・臨床症状の改善が明らかになった場合（1D）\n・カルバマゼピン血中濃度が 10 mg/L (42 µmol/L) 未満になった場合（2D）",
+                "特記事項 (Miscellaneous)": "ECTR施行中もMDACは継続すべきである（1D）。",
+                "Reference": "Ghannoum M, et al. Extracorporeal treatment for carbamazepine poisoning: systematic review and recommendations from the EXTRIP workgroup. Clin Toxicol (Phila). 2014."
+            },
+            "クロロキン / ヒドロキシクロロキン / キニジン": {
+                "全体的な推奨 (General Recommendation)": "キニーネの重症中毒において、標準治療に加えてECTRを行うことは推奨されない（強い推奨）。\n\nクロロキンの重症中毒において、標準治療に加えてECTRを行うことは推奨されない（強い推奨）。\n\nヒドロキシクロロキンは透析性が無いと評価された。臨床データが限られており生物学的妥当性も欠如しているため、事前の合意手順に従い、推奨は作成されなかった。",
+                "Reference": "Berling I, et al. Extracorporeal Treatment for Chloroquine, Hydroxychloroquine, and Quinine Poisoning: Systematic Review and Recommendations from the EXTRIP Workgroup. J Am Soc Nephrol. 2020."
+            },
+            "ジゴキシン": {
+                "全体的な推奨 (General Recommendations)": "ジゴキシン中毒（疑い・確定問わず）において、臨床状況にかかわらず、いかなる形態のECTRも適応とはならない。また、ジゴキシン-Fab複合体の除去目的でのECTRも適応とならない。",
+                "Reference": "Mowry JB, et al. Extracorporeal treatment for digoxin poisoning: systematic review and recommendations from the EXTRIP Workgroup. Clin Toxicol (Phila). 2016."
+            },
+            "エチレングリコール": {
+                "適応 (Indications)": "【用量に基づく適応】\n申告された摂取量のみを根拠としたECTRは推奨されない。\n\n【血中濃度 (EG CONCENTRATION)】\n・ホメピゾール使用時: EG > 50 mmol/L (> 310 mg/dL) で提案\n・エタノール使用時: EG > 50 mmol/L で推奨、20–50 mmol/L で提案\n・解毒剤なし: EG > 10 mmol/L (> 62 mg/dL) で推奨\n\n【オスモルギャップ (OSMOL GAP)】\n・ホメピゾール使用時: > 50 で提案\n・エタノール使用時: > 50 で推奨、20–50 で提案\n・解毒剤なし: > 10 で推奨\n\n【その他の指標と臨床適応】\n・グリコール酸濃度: > 12 mmol/L で推奨、8–12 mmol/L で提案\n・アニオンギャップ: > 27 mmol/L で推奨、23–27 mmol/L で提案\n・臨床症状: 昏睡、または痙攣がある場合は推奨\n・腎機能障害: AKI (KDIGO stage 2 or 3) で推奨、CKD (eGFR <45) で提案",
+                "モダリティの選択 (Modality)": "すべてのモダリティが利用可能な場合、間欠的血液透析（IHD）の使用が推奨される。\nIHDが使用できない場合は、他の手段よりもCKRT（CRRT）が推奨される。",
+                "終了基準 (Cessation)": "・アニオンギャップが 18 mmol/L 未満に改善した場合、終了を推奨\n・EG濃度が 4 mmol/L (25 mg/dL) 未満になった場合、終了を提案\n・酸塩基平衡異常が補正された場合、終了を提案",
+                "Reference": "Ghannoum M, et al. Extracorporeal treatment for ethylene glycol poisoning: systematic review and recommendations from the EXTRIP workgroup. Crit Care. 2023."
+            },
+            "ガバペンチン / プレガバリン": {
+                "全体的な推奨と適応 (General Recommendation and Indications)": "・正常腎機能の重症中毒では、標準治療に加えてECTRを行うことは提案されない（弱い推奨）。\n・腎機能障害が併存する重症中毒では、特に人工呼吸器管理を要する昏睡を伴う場合、標準治療に加えてECTRを行うことが提案される（弱い推奨）。",
+                "モダリティの選択 (Choice of ECTR)": "ECTRが必要な場合、すべてのモダリティが利用可能であれば、間欠的血液透析（IHD）の使用が推奨される（強い推奨）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善に基づいてECTRを終了することが推奨される（強い推奨）。",
+                "特記事項 (Miscellaneous)": "ECTRを施行する場合、離脱症状の兆候に注意し、適切にモニタリングされた環境で慎重にフォローアップすべきである。",
+                "Reference": "Bouchard J, et al. Extracorporeal Treatment for Gabapentin and Pregabalin Poisoning: Systematic Review and Recommendations From the EXTRIP Workgroup. Am J Kidney Dis. 2022."
+            },
+            "イソニアジド": {
+                "全体的な推奨 (General Recommendations)": "重症イソニアジド中毒において、標準治療に加えてECTRを行うことは提案されない（標準治療単独を支持）（弱い推奨）。\n\n標準用量のピリドキシン（ビタミンB6）が投与できない稀な状況に限り、GABA受容体モジュレーター（ベンゾジアゼピン系など）に不応の痙攣がある患者でのみECTRの実施が提案される（弱い推奨）。",
+                "Reference": "Mowry JB, et al. Extracorporeal treatments for isoniazid poisoning: Systematic review and recommendations from the EXTRIP workgroup. Pharmacotherapy. 2021."
+            },
+            "リチウム": {
+                "全体的な推奨 (General Recommendations)": "重症リチウム中毒患者においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "【推奨される（1D）】\n・腎機能障害があり、[Li+] > 4.0 mEq/L の場合\n・[Li+] にかかわらず、意識レベルの低下、痙攣、または致死的不整脈が存在する場合\n\n【提案される（2D）】\n・[Li+] > 5.0 mEq/L の場合\n・錯乱が存在する場合\n・適切な治療を行っても [Li+] < 1.0 mEq/L になるまでに36時間以上かかると予想される場合",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nIHDが使用できない場合は持続的腎代替療法（CRRT）が代替となる（1D）。\n初期治療後の追加セッションとしては、IHDとCRRTのどちらも同等に許容される（1D）。",
+                "終了基準 (Cessation of ECTR)": "・[Li+] < 1.0 mEq/L になった時、または臨床症状の改善が明らかな時（1D）\n・血中濃度が迅速に測定できない場合は、最低6時間のECTR施行後（1D）\n\nECTR終了後は、12時間にわたって血中濃度を連続的に測定し、追加のECTRセッションの要否を判断すべきである（1D）。",
+                "Reference": "Decker BS, et al. Extracorporeal Treatment for Lithium Poisoning: Systematic Review and Recommendations from the EXTRIP Workgroup. Clin J Am Soc Nephrol. 2015."
+            },
+            "メトホルミン": {
+                "全体的な推奨 (General Recommendation)": "重症メトホルミン中毒においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "以下のいずれかに該当する場合に適応となる：\n・乳酸値 > 20 mmol/L（推奨: 1D）、> 15 mmol/L（提案: 2D）\n・pH ≤ 7.0（推奨: 1D）、pH ≤ 7.1（提案: 2D）\n・標準的な支持療法の不応（1D）\n\n【ECTR開始の閾値を下げる併存病態】\n・ショック（1D）\n・腎機能障害（1D）\n・肝不全（2D）\n・意識レベル低下（2D）",
+                "モダリティの選択 (Choice of ECTR)": "炭酸水素塩バッファーを用いた間欠的血液透析（IHD）が初回治療として好ましい（1D）。\nHDが使用できない場合は持続的腎代替療法（CRRT）が考慮される（2D）。\n追加セッションではIHDまたはCRRTのどちらを用いてもよい（1D）。",
+                "終了基準 (Cessation of ECTR)": "乳酸値 < 3 mmol/L かつ pH > 7.35 を満たした場合（1D）。",
+                "特記事項 (Miscellaneous)": "ECTR終了後も、追加セッションの要否を判断するために乳酸値と酸塩基平衡の厳密なモニタリングが必要である。",
+                "Reference": "Calello DP, et al. Extracorporeal Treatment for Metformin Poisoning: Systematic Review and Recommendations From the Extracorporeal Treatments in Poisoning Workgroup. Crit Care Med. 2015."
+            },
+            "メタノール": {
+                "全体的な推奨 (General Recommendation)": "重症メタノール中毒においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "以下のいずれかに該当する場合は推奨される（1D）：\n・昏睡、痙攣、新規の視覚障害\n・血液 pH ≤ 7.15\n・適切な支持療法や解毒剤の投与にもかかわらず持続する代謝性アシドーシス\n・血清アニオンギャップ > 24 mmol/L\n・[メタノール濃度] > 700 mg/L (ホメピゾール治療下)\n・[メタノール濃度] > 600 mg/L (エタノール治療下)\n・[メタノール濃度] > 500 mg/L (ADH阻害薬なし)\n・濃度が測定できない場合、オスモルギャップが指標となる\n・腎機能障害が併存する場合",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nIHDが使用できない場合は持続的モダリティ（CRRT）が許容される代替手段となる（1D）。",
+                "終了基準 (Cessation of ECTR)": "メタノール濃度 < 200 mg/L (6.2 mmol/L) となり、かつ臨床症状の改善が見られた場合に終了できる（1D）。",
+                "特記事項 (Miscellaneous)": "ECTR中もADH阻害薬（ホメピゾール等）および葉酸の投与は継続すること（1D）。",
+                "Reference": "Roberts DM, et al. Recommendations for the role of extracorporeal treatments in the management of acute methanol poisoning: a systematic review and consensus statement. Crit Care Med. 2015."
+            },
+            "メトトレキサート": {
+                "全体的な推奨 (General Recommendations)": "ホリナート（ロイコボリン）救援療法を含む標準治療を受けている重症中毒患者において：\n1) グルカルピダーゼ（glucarpidase）が投与されない場合、ECTRの実施は提案されない（弱い推奨）。\n2) グルカルピダーゼが投与される場合、ECTRの実施は推奨されない（強い推奨）。\n3) グルカルピダーゼを投与する代わりにECTRを実施することは推奨されない（強い推奨）。",
+                "Reference": "Ghannoum M, et al. Extracorporeal Treatment for Methotrexate Poisoning: Systematic Review and Recommendations from the EXTRIP Workgroup. Clin J Am Soc Nephrol. 2022."
+            },
+            "フェニトイン": {
+                "全体的な推奨 (General Recommendation)": "特定の重症フェニトイン中毒症例において、ECTRは妥当な選択肢となり得る（3D）。",
+                "適応 (Indications)": "・遷延性の昏睡が存在、または予想される場合は提案される（2D）。\n・日常生活に支障をきたす遷延性の運動失調が存在、または予想される場合は妥当である（3D）。\n・疑われる摂取量のみに基づくECTRは推奨されない（1D）。\n・血中フェニトイン濃度のみに基づくECTRは推奨されない（1D）。",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nHDが使用できない場合は間欠的血液吸着（HP）が許容される代替手段となる（1D）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善が明らかになった時点（1D）。",
+                "Reference": "Anseeuw K, et al. Extracorporeal Treatment in Phenytoin Poisoning: Systematic Review and Recommendations from the EXTRIP Workgroup. Am J Kidney Dis. 2016."
+            },
+            "サリチル酸": {
+                "全体的な推奨 (General Recommendation)": "重症サリチル酸中毒においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "【以下のいずれかを満たす場合は推奨（1D）】\n・血中濃度 > 7.2 mmol/L (100 mg/dL)\n・腎機能障害が存在し、血中濃度 > 6.5 mmol/L (90 mg/dL)\n・精神状態の変容（意識障害）がある場合\n・酸素投与を必要とする新たな低酸素血症がある場合\n・標準治療（重炭酸ナトリウム投与など）が奏効しない場合\n\n【以下のいずれかを満たす場合は提案（2D）】\n・血中濃度 > 6.5 mmol/L (90 mg/dL)\n・腎機能障害が存在し、血中濃度 > 5.8 mmol/L (80 mg/dL)\n・全身 pH ≤ 7.20",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\n利用できない場合の代替手段：間欠的血液吸着（HP: 1D）、持続的腎代替療法（CRRT: 3D）、新生児の交換輸血（1D）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善が明らかになり（1D）、かつ血中濃度 < 1.4 mmol/L (19 mg/dL) となった場合（1D）。\nまたは、血中濃度が迅速に測定できない状況で、少なくとも4〜6時間のECTRが施行された場合（2D）。",
+                "特記事項 (Miscellaneous)": "ECTRのセッション間も、炭酸水素ナトリウムの静脈内投与を継続することが推奨される（1D）。",
+                "Reference": "Juurlink DN, et al. Extracorporeal Treatment for Salicylate Poisoning: Systematic Review and Recommendations From the EXTRIP Workgroup. Ann Emerg Med. 2015."
+            },
+            "タリウム": {
+                "全体的な推奨 (General Recommendation)": "重症タリウム中毒においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "以下のいずれかに該当する場合は適応となる：\n・病歴や臨床所見からタリウム曝露が強く疑われる場合（2D）\n・血中濃度が速やかに測定可能であり、濃度が > 1.0 mg/L (4.9 µmol/L) の場合（2D）",
+                "開始時期とモダリティ (Timing & Choice)": "ECTRは可能な限り早期、理想的には曝露から24〜48時間以内に開始すべきである（1D）。\n急性摂取後の初回ECTRとしては間欠的血液透析（IHD）が第一選択である（1D）。IHDが使用できない場合はHPやCRRTが有効な代替手段となる（1D）。",
+                "終了基準 (Cessation of ECTR)": "血清タリウム濃度が 0.1 mg/L (0.5 µmol/L) になるまで、最低72時間継続することが提案される（2D）。",
+                "Reference": "Ghannoum M, et al. Extracorporeal treatment for thallium poisoning: recommendations from the EXTRIP Workgroup. Clin J Am Soc Nephrol. 2012."
+            },
+            "テオフィリン": {
+                "全体的な推奨 (General Recommendation)": "重症テオフィリン中毒においてECTRは推奨される（1C）。",
+                "適応 (Indications)": "【以下のいずれかが存在する場合は推奨】\n・急性曝露で血中濃度 > 100 mg/L (555 µmol/L) (1C)\n・痙攣、致死的不整脈、ショックが存在する場合 (1D)\n・最適な治療にもかかわらず血中濃度が上昇する場合 (1D)\n・最適な治療にもかかわらず臨床症状が悪化する場合 (1D)\n\n【以下のいずれかが存在する場合は提案（2D）】\n・慢性曝露で血中濃度 > 60 mg/L (333 µmol/L)\n・6ヶ月未満または60歳以上で、慢性曝露かつ血中濃度 > 50 mg/L (278 µmol/L)\n・消化管除染が施行できない場合",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1C）。\n利用できない場合の代替手段：血液吸着（HP: 1C）、CRRT（3D）。新生児では交換輸血も選択肢（2D）。",
+                "終了基準 (Cessation of ECTR)": "臨床症状の改善が明らかになった時、または血中濃度 < 15 mg/L (83 µmol/L) になった時に終了が推奨される（1D）。",
+                "特記事項 (Miscellaneous)": "ECTR中もMDAC（複数回活性炭投与）を継続すべきである（1D）。",
+                "Reference": "Ghannoum M, et al. Extracorporeal treatment for theophylline poisoning: systematic review and recommendations from the EXTRIP workgroup. Clin Toxicol (Phila). 2015."
+            },
+            "三環系抗うつ薬": {
+                "全体的な推奨 (General Recommendations)": "三環系抗うつ薬（TCA）中毒患者において、ECTRを実施しないことを推奨する（1D）。",
+                "Reference": "Yates C, et al. Extracorporeal treatment for tricyclic antidepressant poisoning: recommendations from the EXTRIP Workgroup. Semin Dial. 2014."
+            },
+            "バルプロ酸": {
+                "全体的な推奨 (General Recommendation)": "重症バルプロ酸（VPA）中毒においてECTRは推奨される（1D）。",
+                "適応 (Indications)": "【以下のいずれかに該当する場合は推奨（1D）】\n・血中濃度 > 1300 mg/L (9000 μmol/L)\n・ショックが存在する場合\n・脳浮腫が存在する場合\n\n【以下のいずれかに該当する場合は提案（2D）】\n・血中濃度 > 900 mg/L (6250 μmol/L)\n・人工呼吸器管理を要する昏睡や呼吸抑制が存在する場合\n・急性の高アンモニア血症が存在する場合\n・pH < 7.10",
+                "モダリティの選択 (Choice of ECTR)": "間欠的血液透析（IHD）が第一選択である（1D）。\nHDが利用できない場合、間欠的血液吸着（HP: 1D）およびCRRT（2D）のいずれも許容される代替手段となる。",
+                "終了基準 (Cessation of ECTR)": "・臨床症状の改善が明らかになった場合（1D）\n・血中濃度が 50〜100 mg/L (350〜700 μmol/L) まで低下した場合（2D）",
+                "Reference": "Ghannoum M, et al. Extracorporeal treatment for valproic acid poisoning: systematic review and recommendations from the EXTRIP workgroup. Clin Toxicol (Phila). 2015."
+            }
+        };
+
+        function initPurification() {
+            const selectBox = document.getElementById('drug-select');
+            Object.keys(extripData).forEach(drug => {
+                const option = document.createElement('option');
+                option.value = drug;
+                option.textContent = drug;
+                selectBox.appendChild(option);
+            });
+        }
+
+        function displayGuidelines() {
+            const selectedDrug = document.getElementById('drug-select').value;
+            const displayArea = document.getElementById('content-display');
+            
+            if (!selectedDrug) {
+                displayArea.innerHTML = `
+                    <div class="text-center text-slate-400 space-y-3">
+                        <i data-lucide="clipboard-list" class="w-8 h-8 mx-auto text-slate-300"></i>
+                        <p class="text-sm font-semibold">上のメニューから薬剤を選択してください。</p>
+                    </div>`;
+                if(window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const data = extripData[selectedDrug];
+            let htmlContent = `
+                <div class="w-full text-left">
+                    <h2 class="text-xl font-bold text-indigo-900 border-b border-indigo-100 pb-3 mb-4 flex items-center gap-2">
+                        ${selectedDrug}
+                    </h2>
+                    <div class="space-y-5">
+            `;
+
+            for (const [key, value] of Object.entries(data)) {
+                if (key === "Reference") {
+                    htmlContent += `
+                        <div class="mt-6 bg-slate-50 p-3 rounded-md border border-slate-200">
+                            <strong class="text-[10px] uppercase font-bold tracking-widest text-indigo-600 block mb-1">Reference</strong>
+                            <p class="text-xs text-slate-500 leading-relaxed font-normal">${value}</p>
+                        </div>`;
+                } else {
+                    const formattedValue = value.replace(/\n/g, '<br>');
+                    htmlContent += `
+                        <div>
+                            <h3 class="text-[11px] font-bold text-indigo-700 uppercase tracking-widest mb-1.5">${key}</h3>
+                            <p class="text-sm text-slate-700 font-medium leading-relaxed">${formattedValue}</p>
+                        </div>
+                    `;
+                }
+            }
+            htmlContent += `</div></div>`;
+            displayArea.innerHTML = htmlContent;
+            
+            displayArea.className = "card-flat p-6 transition-all duration-300 border-t-4 border-t-indigo-400";
+            if(window.lucide) lucide.createIcons();
+        }
+
+        // ==========================================
+        //  3. 拮抗薬アプリのJS
+        // ==========================================
+        const BB_SEARCH_KEYS = "β遮断薬 アテノロール テノーミン ナドロール ナディック プロプラノロール インデラル ソタロール ビソプロロール メインテート メトプロロール セロケン ロプレソール べタキソール ケルロング エスモロール ブレビブロック アセブトロール セクトラール セリプロロール セレクトール チモロール チモプトール ピンドール カルビスケン カルテオロール ミケラン ポピンドロール サンドドリン カルベジロール アーチスト ラベタロール トランデート アロチノール アルマール";
+        const CCB_SEARCH_KEYS = "カルシウム拮抗薬 アムロジピン ノルバスク アムロジン エックスフォージ レザルタス ユニシア アイミクス アジルバ ザクラス テラムロ ミカムロ カムシア カデュエット アテディオ ミカトリオ アゼルニジピン カルブロック シルニジピン アテレック ベニジピン コニール ニフェジピン アダラート ジルチアゼム ヘルベッサー ベラパミル ワソラン";
+        const OPIOID_SEARCH_KEYS = "オピオイド モルヒネ アンペック MSコンチン フェンタニル フェントス オキシコドン オキシコンチン オキノーム タペンタドール タペンタ ヒドロモルフォン ナルサス ナルラピド メサドン メサペイン トラマドール トラマール トラムセット トアラセット コデインリン酸塩 コデイン ジヒドロコデイン パブロンゴールドA パブロンSα パブロンSゴールドW 新ルルAゴールドs ルルAコート錠 ベンザブロックSプレミアム ベンザブロックIPプレミアム エスタックEX エスタックイブファイン 新コルゲンコーワ微粒 コルゲンコーワIB錠 新ブロン液エース エスエスブロン錠 アネトンせき止め パブロンせき止め コデジールG顆粒 ミルコデ錠A";
+
+        const antidotesData = [
+            { antidoteJa: "アトロピン", indicationJa: "有機リン、カーバメート", doseAdult: `1–2 mg、5分ごとに倍量投与\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>0.5mg管（1mL）の場合：2〜4アンプル</div>`, dosePed: "0.02 mg/kg、5分ごとに倍量投与", maintenance: "1時間あたり総負荷量の10%–20%（成人：最大 2 mg/時）", notes: "気道分泌過多、気管支痙攣、徐脈が改善するまで漸増（用量調節）する。", targetDrugsList: "マラチオン, フェニトロチオン, クロルピリホス, ジクロルボス, アセフェート, ダイアジノン, パラチオン 等", searchKeys: "アトロピン硫酸塩水和物 アトロピン硫酸塩注 有機リン カーバメート マラチオン マラソン フェニトロチオン スミチオン クロルピリホス ダーズバン ジクロルボス パピレス バポナ アセフェート オルトラン ダイアジノン パラチオン パラスター" },
+            { antidoteJa: "塩化カルシウム", indicationJa: "β遮断薬、カルシウム拮抗薬 (CCB)", doseAdult: `2000 mg (28 mEq Ca2+, 20 mL 100 mg/mL)\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>2%注（20mL: 400mg）の場合：5アンプル</div>`, dosePed: "20 mg/kg (0.28 mEq Ca2+/kg, 0.2 mL/kg 100 mg/mL)", maintenance: "20–40 mg/kg/時", notes: "血圧を目標に調節する。血清イオン化カルシウム濃度が基準値上限の1.5–2倍を超えないこと。特に小児では中心静脈から投与する。", targetDrugsList: "アテノロール, プロプラノロール, ビソプロロール等（β遮断薬）<br>アムロジピン, ニフェジピン, ジルチアゼム等（CCB）", searchKeys: "塩化カルシウム水和物 塩化カルシウム注2％ " + BB_SEARCH_KEYS + " " + CCB_SEARCH_KEYS },
+            { antidoteJa: "グルコン酸カルシウム", indicationJa: "β遮断薬、カルシウム拮抗薬 (CCB)", doseAdult: `6000 mg (28 mEq Ca2+, 60 mL 100 mg/mL)\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>カルチコール8.5%（10mL: 850mg）の場合：約7アンプル</div>`, dosePed: "60 mg/kg (0.28 mEq/kg Ca2+, 0.6 mL/kg 100 mg/mL)", maintenance: "60–120 mg/kg/時", notes: "血圧を目標に調節する。血清イオン化カルシウム濃度が基準値上限の1.5–2倍を超えないこと。", targetDrugsList: "アテノロール, プロプラノロール, ビソプロロール等（β遮断薬）<br>アムロジピン, ニフェジピン, ジルチアゼム等（CCB）", searchKeys: "グルコン酸カルシウム水和物 カルチコール注射液 " + BB_SEARCH_KEYS + " " + CCB_SEARCH_KEYS },
+            { antidoteJa: "ジゴキシン特異的Fab抗体", indicationJa: "ジゴキシン", doseAdult: "急性過量内服：摂取量0.5 mgにつき1バイアル。<br>慢性中毒：投与バイアル数 = 血清ジゴキシン濃度(ng/mL)×体重(kg)/100<br>重症・摂取量不明：10–20バイアル", dosePed: "成人と同量", maintenance: "なし", notes: "1バイアルにFab 40 mgを含有。低用量でも同等の効果が得られる場合がある。", targetDrugsList: "ジゴキシン, メチルジゴキシン", searchKeys: "ジゴキシン特異的Fab抗体 ジゴキシン ジゴシン ハーフジゴキシン メチルジゴキシン ラニラピッド" },
+            { antidoteJa: "ジゴキシン特異的Fab抗体", indicationJa: "キョウチクトウ、強心性ステロイド等", doseAdult: "1200 mg (30バイアル)", dosePed: "不明", maintenance: "なし", notes: "なし", targetDrugsList: "オレアンドリン, ケルベリン, ブフォトキシン 等", searchKeys: "ジゴキシン特異的Fab抗体 キョウチクトウ オレアンドリン ケルベリン オオミフクラギ ミフクラギ ヤシガニ ブフォトキシン ヒキガエル" },
+            { antidoteJa: "グルカゴン", indicationJa: "β遮断薬、カルシウム拮抗薬 (CCB)", doseAdult: `2–10 mg\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>グルカゴンGノボ 1mgバイアルの場合：2〜10バイアル</div>`, dosePed: "0.05–0.15 mg/kg", maintenance: "1–15 mg/時 (成人)", notes: "嘔吐を予期して対応する。", targetDrugsList: "アテノロール, プロプラノロール等（β遮断薬）<br>アムロジピン, ニフェジピン等（CCB）", searchKeys: "グルカゴン遺伝子組換え グルカゴンGノボ " + BB_SEARCH_KEYS + " " + CCB_SEARCH_KEYS },
+            { antidoteJa: "フルマゼニル", indicationJa: "ベンゾジアゼピン系薬剤", doseAdult: `0.2 mg（必要に応じ最大1 mgまで漸増）\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>0.5mg注（5mL）の場合：初回2mL（最大10mL）</div>`, dosePed: "0.01 mg/kg", maintenance: "なし", notes: "禁忌事項が多いため注意（てんかん患者、TCA等の併用など）。", targetDrugsList: "トリアゾラム, ブロチゾラム, ゾルピデム, エチゾラム, フルニトラゼパム, アルプラゾラム 等", searchKeys: "フルマゼニル フルマゼニル注射液 アネキセート ベンゾジアゼピン受容体作動薬 トリアゾラム ハルシオン ブロチゾラム レンドルミン ロルメタゼパム エバミール ロラメット リルマザホン リスミー フルニトラゼパム サイレース ロヒプノール エスタゾラム ユーロジン ニトラゼパム ベンザリン ネルボン ニメタゼパム エリミン クアゼパム ドラール フルラゼパム ダルメート ハロキサゾラム ソメリン ゾルピデム マイスリー エスゾピクロン ルネスタ ゾピクロン アモバン エチゾラム デパス クロチアゼパム リーゼ フルトプラゼパム レスタス アルプラゾラム ソラナックス コンスタン ロラゼパム ワイパックス ブロマゼパム レキソタン セニラン ジアゼパム セルシン ホリゾン クロキサゾラム セパゾン クロルジアゼポキシド コントール バランス メタゼパム レスミット オキサゾラム セレナール ロフラゼプ酸エチル メイラックス プラゼパム セダプラン クロナゼパム リボリトール ランドセン クロバザム マイスタン" },
+            { antidoteJa: "ヒドロキソコバラミン", indicationJa: "シアン化物", doseAdult: `5 g\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>生食200mLに溶解し15分以上で点滴静注</div>`, dosePed: "70 mg/kg (最大5gまで)", maintenance: "症状により1回追加投与可能（成人総投与量上限10g）。", notes: "一過性の高血圧が生じることがある。", targetDrugsList: "シアン、青酸", searchKeys: "ヒドロキソコバラミン 塩化ナトリウム シアノキット シアン 青酸 シアン化物" },
+            { antidoteJa: "インスリン (HIET療法)", indicationJa: "β遮断薬、カルシウム拮抗薬 (CCB)", doseAdult: `1 U/kg\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>ノボリンR（100U/mL）の場合：50kgで50U（0.5mL）</div>`, dosePed: "成人と同量", maintenance: "1–10 U/kg/時", notes: "レギュラーインスリンを使用。低血糖、低カリウム血症、体液量過剰に注意しモニタリングする。", targetDrugsList: "アテノロール, プロプラノロール等（β遮断薬）<br>アムロジピン, ニフェジピン等（CCB）", searchKeys: "インスリン ヒト遺伝子組換え ノボリンR " + BB_SEARCH_KEYS + " " + CCB_SEARCH_KEYS },
+            { antidoteJa: "脂肪乳剤静注", indicationJa: "局所麻酔薬", doseAdult: `<70 kg: 1.5 mL/kg\n>70 kg: 100 mLを2–3分で急速静注\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>イントラリポス20%（100mL）の場合：70kg以上で1ボトル</div>`, dosePed: "70 kg未満の成人と同量", maintenance: "<70 kg: 0.25 mL/kg/分で最大30分間\n>70 kg: 200–250 mLを15–20分で投与", notes: "すべての研究で20%脂肪乳剤が使用されている。", targetDrugsList: "リドカイン, ブピバカイン, ロピバカイン, メピバカイン 等", searchKeys: "精製大豆油 イントラリポス 局所麻酔薬 プロカイン塩酸塩 プロカニン ロカイン 塩プロ アミノ安息香酸エチル ジンジカイン ハリケイン ビーゾカイン ブピバカイン塩酸塩水和物 マーカイン リドカイン塩酸塩 キシロカイン メピバカイン塩酸塩 カルボカイン ロピバカイン アナペイン 塩酸レボブピバカイン ポプスカイン オキセサゼイン ストロカイン" },
+            { antidoteJa: "メチレンブルー", indicationJa: "カルシウム拮抗薬 (CCB)、メトヘモグロビン血症", doseAdult: `1–2 mg/kg, 必要に応じて1時間ごとに反復\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>50mg管（10mL）の場合：50kgで1〜2アンプル</div>`, dosePed: "成人と同量", maintenance: "1 mg/kg/時 (血管拡張性ショックに対して)", notes: "最大投与量は7 mg/kg。", targetDrugsList: "アムロジピン, ニフェジピン, ジルチアゼム, ベラパミル等（CCB）", searchKeys: "メチルチオニニウム塩化物水和物 メチレンブルー " + CCB_SEARCH_KEYS },
+            { antidoteJa: "ナロキソン", indicationJa: "オピオイド", doseAdult: `0.2–2 mg 静注/骨髄内/筋注, または 2-4mg 経鼻。必要に応じ2-3分毎反復\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>0.2mg管（1mL）の場合：1〜10アンプル</div>`, dosePed: "0.1 mg/kg", maintenance: "覚醒に至った用量の2/3量を1時間あたり持続投与", notes: "呼吸抑制が改善し、気道防御反射が回復するまで漸増（用量調節）する。", targetDrugsList: "モルヒネ, フェンタニル, オキシコドン, トラマドール, ジヒドロコデイン 等", searchKeys: "ナロキソン塩酸塩 ナロキソン塩酸塩静注0.2mg " + OPIOID_SEARCH_KEYS },
+            { antidoteJa: "プラリドキシム (PAM)", indicationJa: "有機リン", doseAdult: `2 gを15–30分かけて静注 (急速静注しない)、または0.6g筋注(最大3回)\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>500mg管（20mL）の場合：4アンプル</div>`, dosePed: "20–50 mg/kg", maintenance: "1 g/時 (成人)、10–20 mg/kg/時 (小児)", notes: "なし", targetDrugsList: "マラチオン, フェニトロチオン, クロルピリホス, ジクロルボス, アセフェート, ダイアジノン, パラチオン 等", searchKeys: "プラリドキシムヨウ化物 パム静注 PAM 有機リン マラチオン マラソン フェニトロチオン スミチオン クロルピリホス ダーズバン ジクロルボス パピレス バポナ アセフェート オルトラン ダイアジノン パラチオン パラスター" },
+            { antidoteJa: "炭酸水素ナトリウム", indicationJa: "ナトリウムチャネル阻害薬、コカイン、局所麻酔薬", doseAdult: `50–150 mEq\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex flex-col gap-0.5"><div class="flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>メイロン8.4%（20mL=20mEq）：2.5〜7.5管</div><div class="flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0 opacity-0"></i>メイロン7%（20mL=16.7mEq）：3〜9管</div></div>`, dosePed: "1–3 mEq/kg", maintenance: "150 mEq/Lの溶液を作成し、1–3 mL/kg/時で持続静注", notes: "高ナトリウム血症、アルカリ血症、低カリウム血症、低クロール血症に注意する。", targetDrugsList: "アミトリプチリン, カルバマゼピン, ジフェンヒドラミン, プロカイン, コカイン 等", searchKeys: "炭酸水素ナトリウム メイロン ナトリウムチャネル阻害薬 アミトリプチリン トリプタノール イミプラミン トフラニール クロミプラミン アナフラニール トリミプラミン スルモンチール ノルトリプチン ノリトレン アモキサピン アモキサン ドスレピン プロチアドン ロフェプラミン アンプリット カルバマゼピン テグレトール ヒドロキシクロロキン プラニケル ジフェンヒドラミン レスタミン ドリエル リポスミン イザネー ビタトレール ハイヤスミンA スリーピン ナイトロンS アンミナイト トラベルミン フレカイニド タンボコール ラモトリギン ラミクタール ラコサミド ビムパット プロパフェノン プロノン キニーネ 塩酸キニーネ キニジン チオリダジン メレリル タキシン イチイ キャラボク キミノオンコ トピラマート トピナ ベンラファキシン イフェクサー ゾニサミド エクセグラン トレリーフ コカイン 局所麻酔薬 プロカイン キシロカイン" },
+            { antidoteJa: "亜硝酸ナトリウム", indicationJa: "シアン化物", doseAdult: "300 mg", dosePed: "6 mg/kg", maintenance: "なし", notes: "低血圧に注意する。", targetDrugsList: "シアン、青酸", searchKeys: "亜硝酸ナトリウム シアン 青酸 シアン化物" },
+            { antidoteJa: "チオ硫酸ナトリウム", indicationJa: "シアン化物", doseAdult: `12.5 g\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>デトキソール2g管（20mL）の場合：6.25バイアル</div>`, dosePed: "250 mg/kg", maintenance: "なし", notes: "なし", targetDrugsList: "シアン、青酸", searchKeys: "チオ硫酸ナトリウム水和物 デトキソール静注液 シアン 青酸 シアン化物" },
+            { antidoteJa: "N-アセチルシステイン", indicationJa: "アセトアミノフェン", doseAdult: "140 mg/kg", dosePed: "140 mg/kg", maintenance: "70 mg/kg 4時間毎に17回投与", notes: "Rumack-Matthewノモグラムで治療適応を確認", targetDrugsList: "アセトアミノフェン含有製剤", searchKeys: "N-アセチルシステイン アセチルシステイン内用液 アセトアミノフェン カロナール タイレノールA ラックル バファリンルナi バファリンルナJ バファリンプレミアム ナロン錠 ナロンエース 新セデス錠 セデス・ハイ パブロンゴールドA パブロンS パブロンメディカル 新ルルゴールドs ルルアタックIBエース エスタック総合感冒 エスタックイブ ピーエイ配合錠" },
+            { antidoteJa: "オクトレオチド", indicationJa: "SU薬", doseAdult: "50-100µgの皮下注射", dosePed: "なし", maintenance: "50-100µgの皮下注射を6時間毎", notes: "通常24時間以内に症状改善することが多い", targetDrugsList: "グリメピリド, グリクラジド, グリベンクラミド 等", searchKeys: "オクトレオチド酢酸塩皮下注 SU薬 スルホニル尿素 グリメピリド アマリール グリクラジド グリミクロン グリベンクラミド オイグルコン ダオニール" },
+            { antidoteJa: "L-カルニチン", indicationJa: "バルプロ酸", doseAdult: "100mg/kgを15-30分で点滴静注", dosePed: "なし", maintenance: "50mg/kgを8時間毎に投与", notes: "高アンモニア血症および肝機能障害に対して投与。経口投与より経静脈投与が推奨。", targetDrugsList: "バルプロ酸ナトリウム", searchKeys: "L-カルニチン レボカルニチン エルカルチンFF静注 バルプロ酸 バルプロ酸ナトリウム デパケン セレニカ" },
+            { antidoteJa: "カルバペネム", indicationJa: "バルプロ酸", doseAdult: "メロペネム1gを点滴静注", dosePed: "なし", maintenance: "メロペネム1gを8時間毎に投与", notes: "血中バルプロ酸濃度に応じて投与。", targetDrugsList: "バルプロ酸ナトリウム", searchKeys: "カルバペネム メロペネム バルプロ酸 バルプロ酸ナトリウム デパケン セレニカ" },
+            { antidoteJa: "シプロヘプタジン", indicationJa: "セロトニン症候群", doseAdult: "12mgを経口投与", dosePed: "なし", maintenance: "2mgを2時間毎に症状改善まで投与", notes: "なし", targetDrugsList: "セロトニン症候群の原因薬物（SSRI, SNRI等）", searchKeys: "シプロヘプタジン ペリアクチン セロトニン症候群 SSRI SNRI" },
+            { antidoteJa: "ジメルカプロール", indicationJa: "重金属、ヒ素など", doseAdult: "2.5mg/kgを筋肉内注射", dosePed: "2.5mg/kgを筋肉内注射", maintenance: "2.5mg/kgを6時間毎に筋肉内注射", notes: "ピーナッツアレルギーは禁忌、肝機能障害に注意。", targetDrugsList: "ヒ素、重金属（水銀、鉛、金、ビスマス、アンチモン等）", searchKeys: "ジメルカプロール バル筋注 重金属 ヒ素 水銀 鉛 金 ビスマス アンチモン" },
+            { antidoteJa: "CaNa2EDTA", indicationJa: "鉛", doseAdult: "1gを1時間かけて点滴静注", dosePed: "なし", maintenance: "1gを1日2回、5日間投与", notes: "重症例ではジメルカプロールを優先、腎機能障害の際は慎重投与", targetDrugsList: "鉛", searchKeys: "CaNa2EDTA エデト酸カルシウムナトリウム水和物 ブライアン点滴静注 鉛" },
+            { antidoteJa: "デフェロキサミン", indicationJa: "鉄", doseAdult: "5mg/kg/hから点滴静注開始", dosePed: "5mg/kg/hから点滴静注開始", maintenance: "5mg/kg/h～最大15mg/kg/h", notes: "重症例や血中鉄濃度500µg/dL以上で使用、尿がロゼワイン色になる、血圧低下に注意", targetDrugsList: "鉄剤（乾燥硫酸第一鉄、フェロミア、インクレミン 等）", searchKeys: "デフェロキサミンメシル酸塩 デスフェラール 鉄 乾燥硫酸第一鉄 フェロ・グラデュメット フマル酸第一鉄 フェルム クエン酸第一鉄ナトリウム フェロミア 溶性ピロリン酸第二鉄 インクレミン クエン酸第二鉄水和物 リオナ スセロフェリック水酸化物 ピートル" },
+            { antidoteJa: "ピリドキシン", indicationJa: "イソニアジド、銀杏", doseAdult: "イソニアジド1gに対してピリドキシン1g、その他の中毒では25mg/kg", dosePed: "イソニアジド1gに対してピリドキシン1g、その他の中毒では25mg/kg", maintenance: "なし", notes: "添付文書の使用量より多いため注意", targetDrugsList: "イソニアジド、銀杏（4'-o-メチルピリドキシン）", searchKeys: "ピリドキシン塩酸塩 ビタメジン イソニアジド イスコチン 銀杏 4'-o-メチルピリドキシン" },
+            { antidoteJa: "プルシアンブルー", indicationJa: "タリウム、セシウム", doseAdult: "3gを経口投与", dosePed: "なし", maintenance: "1回3gを1日3回経口投与", notes: "便が青くなる。電解質異常（特に低カリウム血症）に注意。", targetDrugsList: "タリウム、セシウム", searchKeys: "プルシアンブルー ヘキサシアノ鉄 ラディオガルダーゼ タリウム セシウム" },
+            { antidoteJa: "ホメピゾール", indicationJa: "有毒アルコール", doseAdult: `15mg/kg\n<div class="mt-1 text-emerald-700 text-xs font-semibold flex items-start gap-1"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>30分以上かけて投与する</div>`, dosePed: "15mg/kg", maintenance: "2-5回目は12時間毎に10mg/kg、6回目以降は15mg/kg", notes: "30分以上かけて投与する", targetDrugsList: "メタノール, エチレングリコール, イソプロパノール 等", searchKeys: "ホメピゾール 有毒アルコール メタノール エチレングリコール イソプロパノール ジエチレングリコール プロピレングリコール" },
+            { antidoteJa: "まむし抗毒素血清", indicationJa: "マムシ咬傷", doseAdult: "6,000単位を点滴静注", dosePed: "6,000単位を点滴静注", maintenance: "なし", notes: "アナフィラキシーに注意", targetDrugsList: "マムシ", searchKeys: "マムシ まむし 乾燥まむし抗毒素 蛇" }
+        ];
+
+        function initAntidotes() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+                    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+                });
+                const filteredData = antidotesData.filter(item => {
+                    const keys = (item.searchKeys + " " + item.antidoteJa + " " + item.indicationJa).toLowerCase();
+                    return keys.includes(query);
+                });
+                renderCards(filteredData);
+            });
+            renderCards(antidotesData);
+        }
+
+        function renderCards(data) {
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+            
+            if (data.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center p-8 card-flat">
+                        <i data-lucide="search-x" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                        <p class="text-slate-500 font-semibold text-sm">一致する薬剤が見つかりません</p>
+                    </div>`;
+                if(window.lucide) lucide.createIcons();
+                return;
+            }
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card-flat overflow-hidden';
+                
+                const notesHtml = (item.notes && item.notes !== "なし" && item.notes !== "None") 
+                    ? `<div class="mt-3 bg-amber-50 p-3 rounded border border-amber-100 flex items-start gap-2">
+                         <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                         <p class="text-xs text-amber-900 font-semibold leading-relaxed">${item.notes}</p>
+                       </div>` 
+                    : '';
+
+                const drugsHtml = item.targetDrugsList 
+                    ? `<div class="mt-2">
+                         <details class="group bg-slate-50 rounded border border-slate-100 overflow-hidden">
+                           <summary class="cursor-pointer px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between hover:bg-slate-100">
+                             該当する主な薬毒物
+                             <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform group-open:rotate-180"></i>
+                           </summary>
+                           <div class="px-3 pb-3 pt-1 text-xs font-semibold text-slate-700 leading-relaxed">${item.targetDrugsList}</div>
+                         </details>
+                       </div>`
+                    : '';
+
+                card.innerHTML = `
+                    <div class="bg-emerald-50 px-4 py-3 flex justify-between items-center border-b border-emerald-100">
+                        <div class="text-base font-bold text-emerald-900">${item.antidoteJa}</div>
+                        <div class="bg-white text-emerald-700 px-2.5 py-0.5 rounded text-[10px] font-bold border border-emerald-200">
+                            ${item.indicationJa}
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="border-b md:border-b-0 md:border-r border-slate-100 pb-2 md:pb-0 md:pr-3">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">初回投与量 (成人)</div>
+                                <div class="text-sm font-bold text-slate-800 whitespace-pre-line">${item.doseAdult}</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">初回投与量 (小児)</div>
+                                <div class="text-sm font-bold text-slate-800 whitespace-pre-line">${item.dosePed}</div>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-100 pt-2">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">持続投与</div>
+                            <div class="text-sm font-bold text-slate-800 whitespace-pre-line">${item.maintenance}</div>
+                        </div>
+                        ${drugsHtml}
+                        ${notesHtml}
+                    </div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+            if(window.lucide) lucide.createIcons();
+        }
+
+        // ==========================================
+        //  4. IVeX-screen アプリのJS
+        // ==========================================
+        const ivexDrugData = [
+            { panel: 'METH', jp: 'd-メタンフェタミン（ヒロポン）', en: 'd-Methamphetamine', cutoff: '500' },
+            { panel: 'METH', jp: 'l-メタンフェタミン', en: 'l-Methamphetamine', cutoff: '5,000' },
+            { panel: 'METH', jp: 'p-ヒドロキシメタンフェタミン（メタンフェタミン代謝物）', en: 'p-Hydroxymethamphetamine', cutoff: '6,000' },
+            { panel: 'METH', jp: 'アンフェタミン（メタンフェタミン代謝物）', en: 'Amphetamine', cutoff: '100,000' },
+            { panel: 'METH', jp: 'p-ヒドロキシアンフェタミン（メタンフェタミン代謝物）', en: 'p-Hydroxyamphetamine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'd-エフェドリン', en: 'd-Ephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'l-エフェドリン', en: 'l-Ephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'd-メチルエフェドリン', en: 'd-Methylephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'l-メチルエフェドリン', en: 'l-Methylephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'd-プソイドエフェドリン', en: 'd-Pseudephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'l-プソイドエフェドリン', en: 'l-Pseudephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'd-ノルエフェドリン', en: 'd-Norephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'l-ノルエフェドリン', en: 'l-Norephedrine', cutoff: '>100,000' },
+            { panel: 'METH', jp: '3,4-メチレンジオキシメタンフェタミン（MDMA）', en: '3,4-methylenedioxymethamphetamine', cutoff: '900' },
+            { panel: 'METH', jp: '3,4-メチレンジオキシアンフェタミン（MDA）', en: '3,4-Methylenedioxyamphetamine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'セレギリン（エフピー）', en: 'Sellegiline', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'N-イソプロピルベンジルアミン', en: 'N-Isopropylbenzylamine', cutoff: '500,000' },
+            { panel: 'METH', jp: 'ブプロピオン（ウェルブトリン、ザイバン）', en: 'Bupropion', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'ジメチルアミラミ（DMAA）', en: 'Dimethylamylamine(DMAA)', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'メトキシフェナミン（フストジル）', en: 'Methoxyphenamine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'メトクロプラミド（プリンペラン）', en: 'Metoclopramide', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'メチルフェニデート（コンサータ、リタリン）', en: 'Methylphenidate', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'リタリン酸（メチルフェニデート代謝物）', en: 'Ritalinic acid', cutoff: '>10,000' },
+            { panel: 'METH', jp: 'フェネチルアミン', en: 'beta-Phenethylamine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'トリプタミン', en: 'Tryptamine', cutoff: '>100,000' },
+            { panel: 'METH', jp: 'チラミン', en: 'Tyramine', cutoff: '>100,000' },
+            { panel: 'THC', jp: '11-ノル-9-カルボキシ-Δ9-テトラヒドロカンナビノール（大麻・THC代謝物）', en: '11-nor-9-carboxy-delta-9-tetrahydrocannabinol', cutoff: '50' },
+            { panel: 'THC', jp: 'デルタ9-テトラヒドロカンナビノール（THC）', en: 'Δ9-THC', cutoff: '25,000' },
+            { panel: 'THC', jp: '11-ヒドロキシ-Δ9-テトラヒドロカンナビノール（THC代謝物）', en: '11-Hydroxy-Δ9-THCX', cutoff: '25,000' },
+            { panel: 'THC', jp: '(−)-11-ノル-9-カルボキシ-Δ8-テトラヒドロカンナビノール（THC代謝物）', en: '(−)-11-nor-9-carboxy-Δ8-THC', cutoff: '200' },
+            { panel: 'THC', jp: 'テトラヒドロカンナビノール酸（THCA）', en: 'Δ9-tetrahydrocannabinolic acid', cutoff: '>100,000' },
+            { panel: 'THC', jp: '(−)-11-ノル-9-カルボキシ-Δ9-THC グルクロン酸抱合体', en: '(−)-11-Nor-9-carboxy-Δ9-THC glucuronide', cutoff: '400' },
+            { panel: 'THC', jp: '(+)-11-ノル-9-カルボキシ-Δ9-THC グルクロン酸抱合体', en: '(+)-11-Nor-9-carboxy-Δ9-THC glucuronide', cutoff: '>10,000' },
+            { panel: 'THC', jp: 'カンナビノール（CBN）', en: 'Cannabinol', cutoff: '100,000' },
+            { panel: 'THC', jp: 'カンナビジオール酸（CBDA）', en: 'Cannabidiolic acid', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'カンナビジオール（CBD）', en: 'Cannabidiol', cutoff: '>100,000' },
+            { panel: 'THC', jp: '7-ヒドロキシカンナビジオール（CBD代謝物）', en: '7-Hydroxycannabidiol', cutoff: '>100,000' },
+            { panel: 'THC', jp: '7-カルボキシカンナビジオール（CBD代謝物）', en: '7-Carboxycannabidiol', cutoff: '100,000' },
+            { panel: 'THC', jp: 'カンナビジオール グルクロン酸抱合体', en: 'Cannabidiol glucuronide', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'カンナビゲロール（CBG）', en: 'Cannabigerol', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'カンナビゲロール酸（CBGA）', en: 'Cannabigerolic acid', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'カンナビクロメン（CBC）', en: 'Cannabichromene', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'テトラヒドロカンナビバリン（THCV）', en: 'Tetrahydrocannabivarin', cutoff: '100,000' },
+            { panel: 'THC', jp: 'テトラヒドロカンナビヘキソール（THCH）', en: 'Tetrahydrocannabihexol', cutoff: '100,000' },
+            { panel: 'THC', jp: 'テトラヒドロカンナビノールアセテート（THC-O）', en: 'Tetrahydrocannabinol acetate', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'ヘキサヒドロカンナビノール（HHC）', en: 'Hexahydrocannabinol', cutoff: '100,000' },
+            { panel: 'THC', jp: 'ヘキサヒドロカンナビヘキソール（HHCH）', en: 'Hexahydrocannabihexol', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'ヘキサヒドロカンナビフォロール（HHCP）', en: 'Hexahydrocannabiphorol', cutoff: '>100,000' },
+            { panel: 'THC', jp: 'ヘキサヒドロカンナビノール O-アセテート（HHC-O）', en: 'Hexahydrocannabinol-O-acetate', cutoff: '>100,000' },
+            { panel: 'COC', jp: 'ベンゾイルエクゴニン（コカイン代謝物）', en: 'Benzoylecgonine', cutoff: '300' },
+            { panel: 'COC', jp: 'コカイン', en: 'Cocaine', cutoff: '80,000' },
+            { panel: 'COC', jp: 'プロカインアミド（アミサリン）', en: 'Procainamide', cutoff: '>100,000' },
+            { panel: 'COC', jp: 'N-アセチルプロカインアミド（プロカインアミド代謝物）', en: 'N-Acetylprocainamide', cutoff: '100,000' },
+            { panel: 'COC', jp: 'ベンゾカイン（アミノ安息香酸エチル）', en: 'Benzocaine', cutoff: '>100,000' },
+            { panel: 'COC', jp: 'プロカイン', en: 'Procaine', cutoff: '>100,000' },
+            { panel: 'COC', jp: '4-アミノ安息香酸', en: '4-aminobenzoic acid', cutoff: '>100,000' },
+            { panel: 'COC', jp: 'アコチアミド（アコファイド）', en: 'Acotiamide', cutoff: '30,000' },
+            { panel: 'MOR', jp: 'モルヒネ（アンペック、MSコンチン）', en: 'Morphine', cutoff: '300' },
+            { panel: 'MOR', jp: 'コデイン', en: 'Codeine', cutoff: '300' },
+            { panel: 'MOR', jp: 'ジヒドロコデイン（パブロン、ルル、ブロン 等）', en: 'Dihydrocodeine', cutoff: '3,000' },
+            { panel: 'MOR', jp: 'ヒドロモルフォン（ナルサス、ナルラピド、ナルベイン）', en: 'Hydromorphone', cutoff: '20,000' },
+            { panel: 'MOR', jp: 'オキシコドン（オキシコンチン、オキノーム）', en: 'Oxycodone', cutoff: '>100,000' },
+            { panel: 'MOR', jp: 'ブプレノルフィン（レペタン）', en: 'Buprenorphine', cutoff: '>100,000' },
+            { panel: 'MOR', jp: 'レバロルファン（ロルファン）', en: 'Levallorphan', cutoff: '>100,000' },
+            { panel: 'MOR', jp: 'ナロキソン', en: 'Naloxone', cutoff: 'None' },
+            { panel: 'MOR', jp: 'タペンタドール（タペンタ）', en: 'Tapentadol', cutoff: 'None' },
+            { panel: 'MOR', jp: 'フェンタニル（フェントス）', en: 'Fentanyl', cutoff: '>100,000' },
+            { panel: 'BZD', jp: 'オキサゼパム（セレナール）', en: 'Oxazepam', cutoff: '300' },
+            { panel: 'BZD', jp: 'アルプラゾラム（ソラナックス、コンスタン）', en: 'Alprazolam', cutoff: '300' },
+            { panel: 'BZD', jp: 'α-ヒドロキシアルプラゾラム（アルプラゾラム代謝物）', en: 'α-Hydroxyalprazolam', cutoff: '3,000' },
+            { panel: 'BZD', jp: 'ブロマゼパム（レキソタン、セニラン）', en: 'Bromazepam', cutoff: '600' },
+            { panel: 'BZD', jp: 'ブロチゾラム（レンドルミン）', en: 'Brotizolam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'クロルジアゼポキシド（バランス、コントール）', en: 'Chlordiazepoxide', cutoff: 'None' },
+            { panel: 'BZD', jp: 'クロナゼパム（ランドセン、リボトリール）', en: 'Clonazepam', cutoff: '350' },
+            { panel: 'BZD', jp: 'クロチアゼパム（リーゼ）', en: 'Clotiazepam', cutoff: '100,000' },
+            { panel: 'BZD', jp: 'クロザピン（クロザリル）', en: 'Clozapine', cutoff: 'None' },
+            { panel: 'BZD', jp: 'クロラゼプ酸（メンドン）', en: 'Clorazepate', cutoff: '300' },
+            { panel: 'BZD', jp: 'クロキサゾラム（セパゾン）', en: 'Cloxazolam', cutoff: '>100,000' },
+            { panel: 'BZD', jp: 'ジアゼパム（セルシン、ホリゾン）', en: 'Diazepam', cutoff: '250' },
+            { panel: 'BZD', jp: 'デスメチルジアゼパム', en: 'Desmethyldiazepam', cutoff: '400' },
+            { panel: 'BZD', jp: 'テマゼパム（リストリル）', en: 'Temazepam', cutoff: '150' },
+            { panel: 'BZD', jp: 'エスタゾラム（ユーロジン）', en: 'Estazolam', cutoff: '400' },
+            { panel: 'BZD', jp: 'エチゾラム（デパス）', en: 'Etizolam', cutoff: '>100,000' },
+            { panel: 'BZD', jp: '8-ヒドロキシエチゾラム（エチゾラム代謝物）', en: '8-Hydroxyetizolam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'α-ヒドロキシエチゾラム（エチゾラム代謝物）', en: 'α-Hydroxyetizolam', cutoff: '>5,000' },
+            { panel: 'BZD', jp: 'フルニトラゼパム（サイレース、ロヒプノール）', en: 'Flunitrazepam', cutoff: '400' },
+            { panel: 'BZD', jp: '7-アミノフルニトラゼパム', en: '7-Aminoflunitrazepam', cutoff: '>100,000' },
+            { panel: 'BZD', jp: 'デスメチルフルニトラゼパム', en: 'Desmethylflunitrazepam', cutoff: 'None' },
+            { panel: 'BZD', jp: '3-ヒドロキシフルニトラゼパム', en: '3-Hydroxyflunitrazepam', cutoff: '600' },
+            { panel: 'BZD', jp: 'フルジアゼパム（エリスパン）', en: 'Fludiazepam', cutoff: 'None' },
+            { panel: 'BZD', jp: 'フルラゼパム（ダルメート）', en: 'Flurazepam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'ハロキサゾラム（ソメリン）', en: 'Haloxazolam', cutoff: 'None' },
+            { panel: 'BZD', jp: 'ロラゼパム（ワイパックス）', en: 'Lorazepam', cutoff: '2,000' },
+            { panel: 'BZD', jp: 'ロルメタゼパム（エバミール、ロラメット）', en: 'Lormetazepam', cutoff: 'None' },
+            { panel: 'BZD', jp: 'ロフラゼプ酸エチル（メイラックス）', en: 'Lofrazepate', cutoff: '50,000' },
+            { panel: 'BZD', jp: 'デスアルキルフルラゼパム（共通代謝物）', en: 'Desalkylflurazepam', cutoff: '600' },
+            { panel: 'BZD', jp: 'メダゼパム（レスミット）', en: 'Medazepam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'メキサゾラム（メレックス）', en: 'Mexazolam', cutoff: 'None' },
+            { panel: 'BZD', jp: 'ミダゾラム（ドルミカム）', en: 'Midazolam', cutoff: '10,000' },
+            { panel: 'BZD', jp: 'ニトラゼパム（ベンザリン、ネルボン）', en: 'Nitrazepam', cutoff: '100' },
+            { panel: 'BZD', jp: '7-アミノニトラゼパム', en: '7-Aminonitrazepam', cutoff: '>100,000' },
+            { panel: 'BZD', jp: 'ニメタゼパム（エリミン）', en: 'Nimetazepam', cutoff: 'None' },
+            { panel: 'BZD', jp: 'プラゼパム（セダプラン）', en: 'Prazepam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'クアゼパム（ドラール）', en: 'Quazepam', cutoff: '>100,000' },
+            { panel: 'BZD', jp: 'トリアゾラム（ハルシオン）', en: 'Triazolam', cutoff: '600' },
+            { panel: 'BZD', jp: 'α-ヒドロキシトリアゾラム', en: 'α-Hydroxytriazolam', cutoff: '>10,000' },
+            { panel: 'BZD', jp: 'オランザピン（ジプレキサ）', en: 'Olanzapine', cutoff: 'None' },
+            { panel: 'TCA', jp: 'ノルトリプチリン（ノリトレン）', en: 'Nortriptyline', cutoff: '1,000' },
+            { panel: 'TCA', jp: 'アミトリプチリン（トリプタノール）', en: 'Amitriptyline', cutoff: '300' },
+            { panel: 'TCA', jp: 'アモキサピン（アモキサン）', en: 'Amoxapine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'カルピプラミン（フラフラザイン）', en: 'Carpipramine', cutoff: '100,000' },
+            { panel: 'TCA', jp: 'クロカプラミン（クロフェクトン）', en: 'Clocapramine', cutoff: '100,000' },
+            { panel: 'TCA', jp: 'クロミプラミン（アナフラニール）', en: 'Clomipramine', cutoff: '400' },
+            { panel: 'TCA', jp: 'シクロベンザプリン（フレクセリル）', en: 'Cyclobenzaprine', cutoff: '400' },
+            { panel: 'TCA', jp: 'デシプラミン', en: 'Desipramine', cutoff: '800' },
+            { panel: 'TCA', jp: 'ドスレピン（プロチアデン）', en: 'Dosulepin', cutoff: '1,000' },
+            { panel: 'TCA', jp: 'ドキセピン（プルドキシン、シレノール）', en: 'Doxepine', cutoff: '10,000' },
+            { panel: 'TCA', jp: 'イミプラミン（トフラニール）', en: 'Imipramine', cutoff: '400' },
+            { panel: 'TCA', jp: 'ロフェプラミン（アンプリット）', en: 'Lofepramine', cutoff: '70,000' },
+            { panel: 'TCA', jp: 'トリミプラミン（スルモンチール）', en: 'Trimipramine', cutoff: '3,500' },
+            { panel: 'TCA', jp: 'マプロチリン（ルジオミール）', en: 'Maprotiline', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'ミアンセリン（テトラミド）', en: 'Mianserin', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'ミルタザピン（リフレックス）', en: 'Mirtazapine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'デスメチルミルタザピン', en: 'Desmethylmirtazapine', cutoff: '50,000' },
+            { panel: 'TCA', jp: 'セチプチリン（テシプール）', en: 'Setiptiline', cutoff: 'None' },
+            { panel: 'TCA', jp: 'クロルプロマジン（コントミン、ウインタミン）', en: 'Chlorpromazine', cutoff: '1,000' },
+            { panel: 'TCA', jp: 'フルフェナジン（フルメジン）', en: 'Fluphenazine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'レボメプロマジン（ヒルナミン、レボトミン）', en: 'Levomepromazine', cutoff: '25,000' },
+            { panel: 'TCA', jp: 'ペルフェナジン（ピーゼットシー、トリラホン）', en: 'Perphenazine', cutoff: '100,000' },
+            { panel: 'TCA', jp: 'プロペリシアジン（ニューレプチル）', en: 'Propericyazine', cutoff: '5,000' },
+            { panel: 'TCA', jp: 'チオリダジン', en: 'Thioridazine', cutoff: '6,000' },
+            { panel: 'TCA', jp: 'トリフルオペラジン', en: 'Trifluoperazine', cutoff: '60,000' },
+            { panel: 'TCA', jp: 'オランザピン（ジプレキサ）', en: 'Olanzapine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'クエチアピン（セロクエル）', en: 'Quetiapine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'クエチアピンカルボン酸', en: 'Quetiapine carboxylic acid', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'セチリジン（ジルテック）', en: 'Cetirizine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'シプロヘプタジン（ペリアクチン）', en: 'Cyproheptadine', cutoff: '5,000' },
+            { panel: 'TCA', jp: 'フェニラミン（アネロン）', en: 'Pheniramine', cutoff: '30,000' },
+            { panel: 'TCA', jp: 'ジフェンヒドラミン（レスタミン、ドリエル）', en: 'Diphynhydramine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'デスメチルジフェンヒドラミン', en: 'Desmethyldiphenhydramine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'エバスチン（エバステル）', en: 'Ebastine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'エピナスチン（アレジオン）', en: 'Epinastine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'フェキソフェナジン（アレグラ）', en: 'Fexofenadine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'レボセチリジン（ザイザル）', en: 'Levocetirizine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'ロラタジン（クラリチン）', en: 'Loratadine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'デスロラタジン（デザレックス）', en: 'Desloratadine', cutoff: '100,000' },
+            { panel: 'TCA', jp: 'メキタジン（ゼスラン、ニポラジン）', en: 'Mequitazine', cutoff: '500' },
+            { panel: 'TCA', jp: 'オロパタジン（アレロック）', en: 'Olopatadine', cutoff: '1,000' },
+            { panel: 'TCA', jp: 'ケトチフェン（ザジテン）', en: 'Ketotifen', cutoff: '500' },
+            { panel: 'TCA', jp: 'プロメタジン（ピレチア、ヒベルナ）', en: 'Promethazine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'ビペリデン（アキネトン）', en: 'Biperiden', cutoff: '2,500' },
+            { panel: 'TCA', jp: 'クロルフェニラミン（ポララミン）', en: 'Chrorpheniramine', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'ジフェニドール（セファドール）', en: 'Diphenidol', cutoff: '>100,000' },
+            { panel: 'TCA', jp: 'グリコピロレート（シーブリ、ロビン注）', en: 'Glycopyrrolate', cutoff: '30,000' },
+            { panel: 'BAR', jp: 'セコバルビタール（アイオナール）', en: 'Secobarbital', cutoff: '200' },
+            { panel: 'BAR', jp: 'アモバルビタール（イソミタール）', en: 'Amobarbital', cutoff: '400' },
+            { panel: 'BAR', jp: 'バルビタール', en: 'Barbital', cutoff: '100' },
+            { panel: 'BAR', jp: 'シクロバルビタール', en: 'Cyclobarbital', cutoff: '150' },
+            { panel: 'BAR', jp: 'ペントバルビタール（ラボナ）', en: 'Pentobarbital', cutoff: '200' },
+            { panel: 'BAR', jp: 'フェノバルビタール（フェノバール）', en: 'Phenobarbital', cutoff: '150' },
+            { panel: 'BAR', jp: 'チオペンタール（ラボナール）', en: 'Thiopental', cutoff: '750' },
+            { panel: 'BAR', jp: 'エトスクシミド（エピレオプチマル、ザロンチン）', en: 'Ethosuximide', cutoff: '100,000' }
+        ];
+
+        function initIvex() {
+            const searchInput = document.getElementById('searchInputIvex');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                if (searchTerm === '') {
+                    renderIvexTable(ivexDrugData);
+                    return;
+                }
+                const filteredData = ivexDrugData.filter(item => {
+                    return item.jp.toLowerCase().includes(searchTerm) || 
+                           item.en.toLowerCase().includes(searchTerm) ||
+                           item.panel.toLowerCase().includes(searchTerm);
+                });
+                renderIvexTable(filteredData);
+            });
+            renderIvexTable(ivexDrugData);
+        }
+
+        function renderIvexTable(data) {
+            const tbody = document.getElementById('resultTableBodyIvex');
+            const countDiv = document.getElementById('resultCountIvex');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 font-semibold">該当する薬剤が見つかりません。</td></tr>';
+                countDiv.textContent = '0 件見つかりました';
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none';
+                
+                row.innerHTML = `
+                    <td class="p-3"><span class="panel-badge bg-${item.panel}">${item.panel}</span></td>
+                    <td class="p-3 text-slate-800 font-bold">${item.jp}</td>
+                    <td class="p-3 text-slate-600 font-semibold text-xs">${item.en}</td>
+                    <td class="p-3 text-slate-700 font-bold tracking-tight">${item.cutoff}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            countDiv.textContent = `全 ${data.length} 件`;
+        }
+
+        // ==========================================
+        //  5. NACノモグラム アプリのJS
+        // ==========================================
+        let nomogramChart = null;
+
+        function initNac() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('nacDrawTime').value = now.toISOString().slice(0,16);
+        }
+
+        function calculateNAC() {
+            const ingestionStr = document.getElementById('nacIngestionTime').value;
+            const drawStr = document.getElementById('nacDrawTime').value;
+            const conc = parseFloat(document.getElementById('nacConcentration').value);
+            const resultBox = document.getElementById('nacResultBox');
+            const chartWrapper = document.getElementById('nacChartWrapper');
+
+            if (!ingestionStr || !drawStr || isNaN(conc)) {
+                alert("すべての項目を正しく入力してください。");
+                return;
+            }
+
+            const ingestionTime = new Date(ingestionStr);
+            const drawTime = new Date(drawStr);
+            const hoursElapsed = (drawTime - ingestionTime) / (1000 * 60 * 60);
+
+            if (hoursElapsed < 0) {
+                alert("採血時刻は服薬時刻より後に設定してください。");
+                return;
+            }
+
+            resultBox.classList.remove("hidden");
+            chartWrapper.classList.remove("hidden");
+
+            let status = '';
+            let resultHtml = '';
+
+            if (hoursElapsed < 4) {
+                status = 'warning';
+                resultHtml = `
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-500 shrink-0 mt-0.5"></i>
+                        <div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Warning</div>
+                            <div class="font-bold text-slate-800">服薬から4時間以内のため、ノモグラムによる評価はできません。</div>
+                            <div class="text-sm font-medium text-slate-700 mt-1">服薬からの経過時間: ${hoursElapsed.toFixed(1)} 時間</div>
+                            <div class="text-sm font-medium text-slate-700 mt-1">4時間経過後に再度採血を行い、評価してください。</div>
+                        </div>
+                    </div>`;
+                drawNacChart(hoursElapsed, conc, false);
+            } else if (hoursElapsed > 24) {
+                status = 'warning';
+                resultHtml = `
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-500 shrink-0 mt-0.5"></i>
+                        <div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Warning</div>
+                            <div class="font-bold text-slate-800">服薬から24時間以上経過しているため、ノモグラムは使用できません。</div>
+                            <div class="text-sm font-medium text-slate-700 mt-1">服薬からの経過時間: ${hoursElapsed.toFixed(1)} 時間</div>
+                            <div class="text-sm font-medium text-slate-700 mt-1">肝機能（AST/ALT）や血中濃度から個別にNAC投与の要否を判断してください。</div>
+                        </div>
+                    </div>`;
+                drawNacChart(hoursElapsed, conc, false);
+            } else {
+                const threshold = 150 * Math.pow(0.5, (hoursElapsed - 4) / 4);
+                if (conc >= threshold) {
+                    status = 'danger';
+                    resultHtml = `
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="shield-alert" class="w-6 h-6 text-red-500 shrink-0 mt-0.5"></i>
+                            <div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest text-red-600 mb-1">Treatment Indicated</div>
+                                <div class="text-lg font-black text-red-700 mb-1">NAC投与の適応があります</div>
+                                <div class="text-sm font-medium text-slate-700">服薬からの経過時間: ${hoursElapsed.toFixed(1)} 時間</div>
+                                <div class="text-sm font-medium text-slate-700">治療ライン: ${threshold.toFixed(1)} µg/mL</div>
+                                <div class="text-sm font-bold text-red-600 mt-2">速やかに解毒治療を開始してください。</div>
+                            </div>
+                        </div>`;
+                } else {
+                    status = 'success';
+                    resultHtml = `
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-emerald-500 shrink-0 mt-0.5"></i>
+                            <div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">Not Indicated</div>
+                                <div class="text-lg font-black text-emerald-700 mb-1">NAC投与の適応はありません</div>
+                                <div class="text-sm font-medium text-slate-700">服薬からの経過時間: ${hoursElapsed.toFixed(1)} 時間</div>
+                                <div class="text-sm font-medium text-slate-700">治療ライン: ${threshold.toFixed(1)} µg/mL</div>
+                                <div class="text-sm font-medium text-emerald-700 mt-2">治療ライン未満です。</div>
+                            </div>
+                        </div>`;
+                }
+                drawNacChart(hoursElapsed, conc, true);
+            }
+
+            resultBox.className = "card-flat p-5 transition-all duration-300 border-l-4 " + 
+                (status === 'warning' ? 'border-l-amber-500 bg-amber-50' : 
+                 status === 'danger' ? 'border-l-red-500 bg-red-50' : 
+                 'border-l-emerald-500 bg-emerald-50');
+            
+            resultBox.innerHTML = resultHtml;
+            if(window.lucide) lucide.createIcons();
+        }
+
+        function drawNacChart(patientHours, patientConc, isApplicable) {
+            const ctx = document.getElementById('nacNomogramChart').getContext('2d');
+            
+            const treatmentData = [];
+            for (let t = 4; t <= 24; t += 1) {
+                treatmentData.push({ x: t, y: 150 * Math.pow(0.5, (t - 4) / 4) });
+            }
+
+            if (nomogramChart) {
+                nomogramChart.destroy();
+            }
+
+            Chart.defaults.font.family = "'Inter', 'Noto Sans JP', sans-serif";
+
+            nomogramChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: '治療ライン (150 µg/mL at 4h)',
+                            data: treatmentData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            showLine: true,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: '患者データ',
+                            data: [{ x: patientHours, y: patientConc }],
+                            backgroundColor: '#0d9488',
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: { display: true, text: '服薬からの時間 (h)', color: '#64748b', font: {weight: 'bold'} },
+                            min: 0,
+                            max: 25,
+                            ticks: { stepSize: 4, color: '#475569' },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y: {
+                            type: 'logarithmic',
+                            title: { display: true, text: '血中濃度 (µg/mL)', color: '#64748b', font: {weight: 'bold'} },
+                            min: 1,
+                            max: 1000,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if (value === 1 || value === 10 || value === 100 || value === 1000) {
+                                        return value;
+                                    }
+                                    return '';
+                                },
+                                color: '#475569'
+                            },
+                            grid: { color: '#f1f5f9' }
+                        }
+                    },
+                    plugins: {
+                        legend: { 
+                            position: 'top',
+                            labels: { color: '#475569', font: {weight: 'bold'} }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: "'Inter', 'Noto Sans JP'", size: 13 },
+                            bodyFont: { family: "'Inter', 'Noto Sans JP'", size: 13 },
+                            callbacks: {
+                                label: function(context) {
+                                    return `時間: ${context.parsed.x.toFixed(1)}h, 濃度: ${context.parsed.y.toFixed(1)} µg/mL`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        //  全機能の初期化処理
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharcoal();
+            initPurification();
+            initAntidotes();
+            initIvex();
+            initNac();
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
